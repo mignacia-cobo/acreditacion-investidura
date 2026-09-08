@@ -564,6 +564,7 @@ function toast(msg){
    ============================================================ */
 let checkins = {};
 let dbReady = false;
+let lastLocalWriteAt = {}; // n -> Date.now() del último saveCheckin local, para no perder guardados propios frente a un poll con una foto vieja del servidor
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwmmuiFL0F-s2KmSFs3gBRGHUjdZhLgzKbTgN2aokJEvlcBgyZP8fQdudVw6KjmN3UdwQ/exec';
 let pendingScanRut = null; // rut escaneado sin coincidencia todavía
 let pendingScanNameGuess = null; // mejor intento de nombre extraído del texto crudo del código, si lo hay
@@ -593,6 +594,7 @@ async function saveCheckin(n, patch){
   const cur = getCheckin(n);
   const next = Object.assign({}, cur, patch, {n});
   checkins[n] = next;
+  lastLocalWriteAt[n] = Date.now();
   renderAll(); // optimista
   if(!sheetsConfigured()){ toast('Sin conexión a la base compartida — el cambio solo quedó en este dispositivo'); return; }
   try{
@@ -731,7 +733,24 @@ async function pollCheckins(){
     const res = await fetch(SHEETS_API_URL + (SHEETS_API_URL.includes('?') ? '&' : '?') + 't=' + Date.now());
     const json = await res.json();
     if(!json || json.ok !== true) throw new Error('bad response');
-    checkins = json.checkins || {};
+    const serverCheckins = json.checkins || {};
+    // OJO: no reemplazamos checkins de golpe con lo que llega del servidor.
+    // Si acabamos de guardar algo localmente (por ejemplo, cargando RUTs en
+    // masa) y este poll alcanzó a pedir el estado ANTES de que ese guardado
+    // terminara de reflejarse en la planilla, un reemplazo directo borraría
+    // ese cambio recién hecho. Por eso: para cada alumno, si escribimos algo
+    // localmente en los últimos 8 segundos, mantenemos nuestro valor local;
+    // si no, confiamos en el servidor (así igual llegan los cambios hechos
+    // desde otras estaciones).
+    const merged = Object.assign({}, checkins);
+    const now = Date.now();
+    for(const key of Object.keys(serverCheckins)){
+      const lastWrite = lastLocalWriteAt[key] || 0;
+      if(now - lastWrite > 8000){
+        merged[key] = serverCheckins[key];
+      }
+    }
+    checkins = merged;
     dbReady = true;
     dot.className = 'conn-dot ok';
     label.textContent = 'sincronizado';
@@ -996,7 +1015,17 @@ async function startScanning(){
     // Pide el permiso de cámara de inmediato, lo más cerca posible del toque
     // del botón — algunos navegadores (sobre todo Safari/iOS) rechazan el
     // permiso si la solicitud llega después de otros pasos async.
-    const constraints = { video: { facingMode: { ideal: 'environment' } } };
+    // Se pide una resolución alta (solo como "ideal", nunca falla si el
+    // dispositivo no la soporta) porque muchos celulares eligen por defecto
+    // una resolución muy baja para la cámara trasera, insuficiente para leer
+    // bien un código chico como el de una cédula a la distancia normal de uso.
+    const constraints = {
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
+    };
     const preflight = await navigator.mediaDevices.getUserMedia(constraints);
     preflight.getTracks().forEach(t => t.stop());
 
@@ -1040,12 +1069,29 @@ async function startScanning(){
 }
 
 function onScanResult(result, err){
-  if(result){
-    const raw = result.getText();
-    const rut = extractRutToken(raw);
-    handleScannedRut(rut, raw);
+  const statusEl = document.getElementById('scanStatus');
+  try{
+    if(result){
+      const raw = result.getText();
+      const rut = extractRutToken(raw);
+      handleScannedRut(rut, raw);
+      return;
+    }
+    // "NotFoundException" en cada frame sin código a la vista es normal
+    // durante el escaneo continuo — se ignora. Cualquier OTRO tipo de error
+    // (checksum, formato) suele significar que la cámara SÍ ve un código
+    // pero no logra leerlo bien todavía (mala luz, ángulo, distancia) — eso
+    // sí vale la pena avisarlo, para que quede claro que el escaneo está
+    // funcionando y solo hay que ajustar el encuadre.
+    if(err && err.name && err.name !== 'NotFoundException' && statusEl && scanning){
+      statusEl.textContent = 'Veo un código pero no logro leerlo bien — acércalo, evita el reflejo o mejora la luz.';
+    }
+  }catch(fatalErr){
+    // Nunca dejar que un error inesperado deje el escaneo en silencio total.
+    if(statusEl){
+      statusEl.textContent = 'Ocurrió un error al procesar el código (' + (fatalErr && fatalErr.message ? fatalErr.message : 'desconocido') + '). Prueba de nuevo o usa la pestaña Buscar.';
+    }
   }
-  // los errores "NotFound"/checksum durante el escaneo continuo son normales: se ignoran.
 }
 
 function handleScannedRut(rut, raw){
