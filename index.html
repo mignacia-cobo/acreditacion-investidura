@@ -568,6 +568,7 @@ let lastLocalWriteAt = {}; // n -> Date.now() del último saveCheckin local, par
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwmmuiFL0F-s2KmSFs3gBRGHUjdZhLgzKbTgN2aokJEvlcBgyZP8fQdudVw6KjmN3UdwQ/exec';
 let pendingScanRut = null; // rut escaneado sin coincidencia todavía
 let pendingScanNameGuess = null; // mejor intento de nombre extraído del texto crudo del código, si lo hay
+let pendingScanRaw = null; // texto crudo completo del último código sin coincidencia (siempre se muestra, aunque no se logre adivinar el nombre)
 
 function getCheckin(n){
   if(checkins[n]) return checkins[n];
@@ -994,13 +995,33 @@ function extractNameGuess(rawText){
   // mejor intento de "esto podría ser el nombre" para que el staff no se
   // quede sin ninguna pista y pueda buscarlo a mano.
   if(!rawText) return null;
-  const parts = rawText.split(/[|@;\n\r]+/).map(s=>s.trim()).filter(Boolean);
+
+  // Intento 1: separar por delimitadores típicos (incluye coma, dos puntos y
+  // tab además de los originales, por si el QR real usa otro formato) y
+  // buscar un bloque que sea PURO texto de nombre.
+  const parts = rawText.split(/[|@;,:\t\n\r]+/).map(s=>s.trim()).filter(Boolean);
   const nameLike = parts.filter(p =>
     /^[a-zà-ÿñ\s.'-]{4,60}$/i.test(p) &&
-    !/^https?:/i.test(p) &&
+    !/^https?:?$/i.test(p) && // "http"/"https" solos, porque el ':' ya se separó arriba
+    !/^www\./i.test(p) &&
     !/^\d+$/.test(p)
   );
-  return nameLike.length ? nameLike.join(' ').trim() : null;
+  if(nameLike.length) return nameLike.join(' ').trim();
+
+  // Intento 2 (más permisivo): si el formato real no usa ninguno de esos
+  // separadores (por ejemplo, todo pegado o separado con otro símbolo que no
+  // reconocemos), se buscan corridas de 2 a 6 palabras alfabéticas dentro del
+  // texto crudo completo — normalmente el nombre es la corrida más larga,
+  // ya que RUN/fechas quedan como bloques de dígitos. Primero se quitan las
+  // URLs completas para que un dominio como "verifica.cl" no se confunda
+  // con un nombre de 2 palabras.
+  const withoutUrls = rawText.replace(/https?:\/\/\S+/gi, ' ');
+  const runs = withoutUrls.match(/[A-Za-zÀ-ÿÑñ]{3,}(?:[\s'-]+[A-Za-zÀ-ÿÑñ]{3,}){1,5}/g);
+  if(runs && runs.length){
+    const best = runs.sort((a,b)=>b.length-a.length)[0];
+    if(best) return best.trim();
+  }
+  return null;
 }
 
 function scanAvailable(){
@@ -1175,9 +1196,10 @@ function handleScannedRut(rut, raw){
     // nombre reconocible dentro del texto crudo, para que el staff tenga
     // algo con qué buscar a mano si el problema persiste.
     const nameGuess = extractNameGuess(raw);
+    const rawSnippet = raw ? (raw.length > 120 ? raw.slice(0, 120) + '…' : raw) : '';
     statusEl.textContent = nameGuess
       ? 'Código leído (¿' + nameGuess + '?) pero sin RUT — sigue intentando o búscalo por nombre en la pestaña Buscar.'
-      : 'Código leído pero no se detectó un RUT — probando de nuevo…';
+      : ('Código leído pero no se detectó un RUT (texto: "' + rawSnippet + '") — probando de nuevo…');
     // Sí hubo una lectura real recién — se le da al watchdog otro respiro
     // antes de que pueda pisar este mensaje con uno genérico.
     scanNextHintAt = Date.now() + 4000;
@@ -1213,6 +1235,7 @@ function handleScannedRut(rut, raw){
   } else {
     pendingScanRut = rut;
     pendingScanNameGuess = extractNameGuess(raw);
+    pendingScanRaw = raw;
     stopScanning();
     switchToBuscar();
     showScanPendingBanner();
@@ -1237,7 +1260,16 @@ function showScanPendingBanner(){
   } else {
     msg += ' Búscalo por nombre abajo para asociarlo a mano.';
   }
-  b.textContent = msg;
+  // Siempre se muestra el texto crudo tal cual lo leyó la cámara, aunque no
+  // se haya logrado adivinar un nombre dentro de él — así el staff puede
+  // leerlo con sus propios ojos en vez de depender de que la app lo haya
+  // interpretado bien.
+  if(pendingScanRaw){
+    const shown = pendingScanRaw.length > 300 ? pendingScanRaw.slice(0, 300) + '…' : pendingScanRaw;
+    b.innerHTML = esc(msg) + '<br><span class="mono" style="font-size:11.5px; opacity:.85;">Texto leído: ' + esc(shown) + '</span>';
+  } else {
+    b.textContent = msg;
+  }
 }
 
 function hideScanPendingBanner(){
@@ -1246,6 +1278,7 @@ function hideScanPendingBanner(){
   b.classList.remove('danger');
   pendingScanRut = null;
   pendingScanNameGuess = null;
+  pendingScanRaw = null;
 }
 
 function stopScanning(){
