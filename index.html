@@ -1058,11 +1058,19 @@ async function startScanning(){
     preflight.getTracks().forEach(t => t.stop());
 
     const hints = new Map();
-    const formats = [
-      ZXing.BarcodeFormat.PDF_417, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
-      ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.QR_CODE,
-      ZXing.BarcodeFormat.DATA_MATRIX
-    ];
+    // Solo QR: la usuaria ya decidió usar únicamente el QR de la cédula de
+    // identidad (el código de barras Code 128 de la Credencial Digital Duoc
+    // lee un número distinto al real). Antes se le pedía a ZXing que también
+    // probara PDF_417/CODE_128/CODE_39/EAN_13/ITF/DATA_MATRIX — eso hacía que,
+    // apenas se abría la cámara, decodificara casi al instante CUALQUIER otro
+    // código de barras que apareciera en cuadro (el de la credencial, por
+    // ejemplo) antes de que hubiera tiempo de apuntar al QR correcto, y como
+    // ese código no correspondía a ningún alumno, el escaneo se cerraba de
+    // inmediato mostrando "no encontrado" — exactamente el síntoma reportado
+    // ("aparece algo pero se va muy rápido y no aparece los datos del
+    // alumno"). Limitar a QR_CODE evita que reaccione a nada que no sea el
+    // QR que realmente se quiere leer.
+    const formats = [ZXing.BarcodeFormat.QR_CODE];
     hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
     hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
     codeReader = new ZXing.BrowserMultiFormatReader(hints);
