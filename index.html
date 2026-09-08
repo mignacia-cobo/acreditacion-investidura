@@ -698,6 +698,7 @@ async function applyBulkRut(){
   saveBtn.textContent = 'Guardando…';
 
   let saved = 0;
+  const savedNames = [];
   const unmatched = [];
   for(const line of lines){
     const parsed = parseBulkRutLine(line);
@@ -706,11 +707,18 @@ async function applyBulkRut(){
     if(n == null){ unmatched.push(esc(line) + ' — sin coincidencia de alumno'); continue; }
     await saveCheckin(n, { rut: parsed.rut });
     saved++;
+    savedNames.push(esc((rosterByN[n] && rosterByN[n].nombre) || ('N°'+n)) + ' — ' + esc(parsed.rut));
   }
 
   saveBtn.disabled = false;
   saveBtn.textContent = 'Guardar todos';
+  // Se listan los nombres guardados explícitamente (no basta con un número):
+  // esto se guarda para TODOS los de la lista pegada, sin importar qué haya
+  // escrito en el buscador de la pestaña Acreditación en ese momento — si
+  // alguien no aparece abajo en "Guardados", es porque quedó en "sin
+  // coincidencia", nunca por el filtro de búsqueda de arriba.
   resultEl.innerHTML = `Guardados: <strong>${saved}</strong> de ${lines.length}.` +
+    (savedNames.length ? '<br><br>Guardados:<br>' + savedNames.join('<br>') : '') +
     (unmatched.length ? '<br><br>Sin coincidencia (búscalos a mano en la pestaña Buscar):<br>' + unmatched.join('<br>') : '');
   if(unmatched.length === 0){ toast('RUTs guardados'); setTimeout(closeBulkRutModal, 1500); }
 }
@@ -967,6 +975,10 @@ function wireDetail(n){
    ============================================================ */
 let codeReader = null;
 let scanning = false;
+let scanWatchdogTimer = null;
+let scanFrameCount = 0; // cuántas veces ZXing llamó a onScanResult (con o sin código) desde que empezó a escanear
+let scanStartedAt = 0;
+let scanNextHintAt = 0; // próximo momento en que el "watchdog" tiene permiso de escribir un mensaje
 
 function extractRutToken(rawText){
   // Quita separadores típicos y busca un bloque de 7-9 dígitos + dígito verificador
@@ -1005,6 +1017,16 @@ async function startScanning(){
   const unavailEl = document.getElementById('scanUnavailable');
   const btn = document.getElementById('scanToggleBtn');
 
+  // IMPORTANTE: cada vez que se inicia (o reinicia) el escaneo, se olvida
+  // cualquier alumno que haya quedado "abierto" de una búsqueda o de un
+  // escaneo anterior. Si no se hace esto, handleScannedRut cree que el
+  // siguiente código escaneado hay que asignárselo al alumno que quedó
+  // abierto (rama pensada para "ya tengo a este alumno abierto, solo quiero
+  // leer su RUT") en vez de buscar al alumno correcto — y entonces, al
+  // escanear al segundo/tercer alumno, no aparecía como encontrado ni se
+  // podía confirmar su llegada.
+  openStudent = null;
+
   if(!scanAvailable()){
     unavailEl.textContent = 'El escaneo no está disponible en este dispositivo o navegador. Usa la pestaña Buscar para acreditar por nombre o RUT.';
     unavailEl.style.display = '';
@@ -1023,7 +1045,13 @@ async function startScanning(){
       video: {
         facingMode: { ideal: 'environment' },
         width: { ideal: 1920 },
-        height: { ideal: 1080 }
+        height: { ideal: 1080 },
+        // "advanced" son preferencias best-effort: el navegador las intenta
+        // pero nunca hace fallar getUserMedia si no las soporta (a diferencia
+        // de ponerlas directo en video:{...}). Pedir foco continuo ayuda
+        // mucho a leer códigos chicos de cerca en celulares cuya cámara, por
+        // defecto, no reenfoca sola.
+        advanced: [{ focusMode: 'continuous' }]
       }
     };
     const preflight = await navigator.mediaDevices.getUserMedia(constraints);
@@ -1045,6 +1073,19 @@ async function startScanning(){
     btn.textContent = 'Detener escaneo';
     btn.classList.add('stop');
     scanning = true;
+
+    // "Watchdog": si el escaneo real (ZXing/cámara) se queda callado — algo
+    // que no se puede probar en este entorno, solo revisar a mano — este
+    // temporizador se encarga de que SIEMPRE aparezca algún aviso en pantalla
+    // en vez de dejar la cámara mostrándose sin decir nada. Distingue "la
+    // cámara ni siquiera está mandando imágenes" (probable problema de
+    // permiso/dispositivo) de "manda imágenes pero no logra leer ningún
+    // código" (probable problema de foco/luz/distancia).
+    scanFrameCount = 0;
+    scanStartedAt = Date.now();
+    scanNextHintAt = scanStartedAt + 4000;
+    if(scanWatchdogTimer) clearInterval(scanWatchdogTimer);
+    scanWatchdogTimer = setInterval(watchScanProgress, 500);
 
     let started = false;
     if(typeof codeReader.decodeFromConstraints === 'function'){
@@ -1068,8 +1109,31 @@ async function startScanning(){
   }
 }
 
+function watchScanProgress(){
+  if(!scanning) return;
+  const now = Date.now();
+  if(now < scanNextHintAt) return;
+  const statusEl2 = document.getElementById('scanStatus');
+  if(!statusEl2) return;
+  const elapsed = now - scanStartedAt;
+  if(scanFrameCount === 0){
+    // ZXing nunca llegó a llamar a onScanResult: lo más probable es que la
+    // cámara no está entregando video (permiso rechazado a medias, cámara
+    // ocupada por otra app, etc.) — no es un problema de foco/luz.
+    statusEl2.textContent = 'La cámara no está enviando imágenes al lector — revisa que hayas aceptado el permiso de cámara, o usa la pestaña Buscar.';
+    scanNextHintAt = now + 5000;
+  } else if(elapsed < 12000){
+    statusEl2.textContent = 'Sigo sin leer ningún código — acerca o aleja la cámara, evita reflejos o mejora la luz, o usa la pestaña Buscar para continuar a mano.';
+    scanNextHintAt = now + 8000;
+  } else {
+    statusEl2.textContent = 'Llevas bastante rato sin que se lea ningún código — puede que esta cámara no lo logre bien; usa la pestaña Buscar (nombre o RUT) para no perder tiempo.';
+    scanNextHintAt = now + 15000;
+  }
+}
+
 function onScanResult(result, err){
   const statusEl = document.getElementById('scanStatus');
+  scanFrameCount++;
   try{
     if(result){
       const raw = result.getText();
@@ -1106,6 +1170,9 @@ function handleScannedRut(rut, raw){
     statusEl.textContent = nameGuess
       ? 'Código leído (¿' + nameGuess + '?) pero sin RUT — sigue intentando o búscalo por nombre en la pestaña Buscar.'
       : 'Código leído pero no se detectó un RUT — probando de nuevo…';
+    // Sí hubo una lectura real recién — se le da al watchdog otro respiro
+    // antes de que pueda pisar este mensaje con uno genérico.
+    scanNextHintAt = Date.now() + 4000;
     return;
   }
   statusEl.textContent = 'RUT detectado: ' + rut;
@@ -1178,6 +1245,7 @@ function stopScanning(){
     try{ codeReader.reset(); }catch(e){}
   }
   scanning = false;
+  if(scanWatchdogTimer){ clearInterval(scanWatchdogTimer); scanWatchdogTimer = null; }
   const btn = document.getElementById('scanToggleBtn');
   btn.textContent = 'Iniciar escaneo';
   btn.classList.remove('stop');
