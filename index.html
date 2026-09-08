@@ -486,7 +486,7 @@
         <label>Orden</label>
         <select id="orderSelect">
           <option value="apellido">Alfabético (apellido)</option>
-          <option value="especialidad">Por especialidad</option>
+          <option value="especialidad" selected>Por especialidad</option>
         </select>
       </div>
     </div>
@@ -1301,7 +1301,7 @@ const _origMatch = matchStudents;
    Vista Locutor
    ============================================================ */
 let groupSize = 10;
-let orderMode = 'apellido';
+let orderMode = 'especialidad'; // por defecto: agrupado por especialidad (IA primero, ver ESPECIALIDAD_ORDER), no alfabético
 let calledGroups = {}; // local, no sincronizado
 
 // Todos los alumnos tienen 2 apellidos (las últimas 2 palabras del nombre
