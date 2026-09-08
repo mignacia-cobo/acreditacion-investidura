@@ -1195,6 +1195,27 @@ let groupSize = 10;
 let orderMode = 'apellido';
 let calledGroups = {}; // local, no sincronizado
 
+// Todos los alumnos tienen 2 apellidos (las últimas 2 palabras del nombre
+// completo) — se muestran juntos, después del/los nombre(s) de pila, no
+// separados ni reordenados.
+function bothApellidos(nombreCompleto){
+  const parts = (nombreCompleto||'').trim().split(/\s+/).filter(Boolean);
+  return parts.slice(-2).join(' ');
+}
+function nombrePila(nombreCompleto){
+  const parts = (nombreCompleto||'').trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, -2).join(' ');
+}
+
+// Orden pedido por especialidad en la vista Locutor: primero Inteligencia
+// Artificial, después Desarrollo de Software. Cualquier otro valor (por
+// ejemplo "Por confirmar" o "NO APLICA") queda al final.
+const ESPECIALIDAD_ORDER = ['Inteligencia Artificial', 'Desarrollo de Software'];
+function especialidadRank(esp){
+  const idx = ESPECIALIDAD_ORDER.indexOf(esp);
+  return idx === -1 ? ESPECIALIDAD_ORDER.length : idx;
+}
+
 document.getElementById('grpMinus').addEventListener('click', () => { groupSize = Math.max(1, groupSize-1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
 document.getElementById('grpPlus').addEventListener('click', () => { groupSize = Math.min(30, groupSize+1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
 document.getElementById('orderSelect').addEventListener('change', e => { orderMode = e.target.value; renderLocutor(); });
@@ -1213,7 +1234,7 @@ function computeGroups(){
     for(let i=0;i<list.length;i+=groupSize) groups.push({esp:null, items:list.slice(i,i+groupSize)});
     return groups;
   }
-  list.sort((a,b) => a.especialidad.localeCompare(b.especialidad,'es') || a.apellido.localeCompare(b.apellido,'es'));
+  list.sort((a,b) => especialidadRank(a.especialidad) - especialidadRank(b.especialidad) || a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es'));
   const groups = [];
   let current = []; let curEsp = null;
   list.forEach(item => {
@@ -1249,7 +1270,7 @@ function renderLocutor(){
       const called = calledGroups[gkey+'-'+it.n];
       return `<div class="name-item ${called?'called':''}" data-name-n="${it.n}" data-gkey="${gkey}">
         <span class="idx mono">${idx+1}</span>
-        <span><span class="apn">${esc(it.apellido)}</span> ${esc(it.nombre.replace(it.apellido,'').trim())}</span>
+        <span>${esc(nombrePila(it.nombre))} <span class="apn">${esc(bothApellidos(it.nombre))}</span></span>
       </div>`;
     }).join('');
     return `<div class="group-card ${done?'done':''}">
