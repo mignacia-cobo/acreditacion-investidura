@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Acreditación Investidura</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f6f9;
+    --surface:#ffffff;
+    --ink:#12161c;
+    --ink-soft:#4b5563;
+    --accent:#1c7ce0;
+    --accent-soft:#eaf3fd;
+    --success:#1a8a5a;
+    --success-soft:#e7f6ef;
+    --danger:#c0362c;
+    --danger-soft:#fbeae8;
+    --border:#e1e5eb;
+    --topbar:#0a0d13;
+    --topbar-ink:#f4f6f9;
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1117;
+      --surface:#161b22;
+      --ink:#e8edf3;
+      --ink-soft:#9aa5b1;
+      --accent:#5fb0ff;
+      --accent-soft:#122437;
+      --success:#3fcf8e;
+      --success-soft:#0f2b21;
+      --danger:#ff6b60;
+      --danger-soft:#341415;
+      --border:#2a313c;
+      --topbar:#05070a;
+      --topbar-ink:#f4f6f9;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1117;
+    --surface:#161b22;
+    --ink:#e8edf3;
+    --ink-soft:#9aa5b1;
+    --accent:#5fb0ff;
+    --accent-soft:#122437;
+    --success:#3fcf8e;
+    --success-soft:#0f2b21;
+    --danger:#ff6b60;
+    --danger-soft:#341415;
+    --border:#2a313c;
+    --topbar:#05070a;
+    --topbar-ink:#f4f6f9;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .topbar{
+    background:var(--topbar);
+    color:var(--topbar-ink);
+    padding:16px 20px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .mark{
+    width:34px;height:34px;border-radius:9px;
+    background:var(--accent);
+    color:#04101c;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Manrope',sans-serif;font-weight:800;font-size:14px;
+    flex-shrink:0;
+  }
+  .topbar-text .kicker{
+    font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:#9db6d4;font-weight:600;
+  }
+  .topbar-text .title{
+    font-family:'Manrope',sans-serif;font-weight:700;font-size:16px;
+  }
+  main{
+    flex:1;
+    max-width:520px;
+    width:100%;
+    margin:0 auto;
+    padding:20px 16px 32px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px;
+  }
+  .lead{
+    font-size:14px;
+    color:var(--ink-soft);
+    line-height:1.5;
+    margin:0;
+  }
+  #videoWrap{
+    display:none;
+    position:relative;
+    border-radius:var(--radius);
+    overflow:hidden;
+    background:#000;
+    aspect-ratio:4/3;
+  }
+  video{
+    width:100%;height:100%;object-fit:cover;display:block;
+  }
+  .scan-line{
+    position:absolute;left:8%;right:8%;top:50%;height:2px;
+    background:var(--accent);
+    box-shadow:0 0 8px var(--accent);
+    opacity:.85;
+  }
+  #statusText{
+    font-size:13px;
+    color:var(--ink-soft);
+    text-align:center;
+    min-height:18px;
+  }
+  button{
+    font-family:inherit;
+    font-size:15px;
+    font-weight:600;
+    border-radius:10px;
+    border:none;
+    padding:13px 18px;
+    cursor:pointer;
+  }
+  .btn-primary{
+    background:var(--accent);
+    color:#04101c;
+    width:100%;
+  }
+  .btn-primary.stop{
+    background:var(--danger);
+    color:#fff;
+  }
+  .btn-secondary{
+    background:var(--accent-soft);
+    color:var(--accent);
+    width:100%;
+  }
+  #unavailBox{
+    display:none;
+    background:var(--danger-soft);
+    color:var(--danger);
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:13.5px;
+    line-height:1.5;
+  }
+  #resultBox{
+    display:none;
+    background:var(--success-soft);
+    border:1px solid var(--success);
+    border-radius:var(--radius);
+    padding:20px;
+    text-align:center;
+  }
+  #resultBox .label{
+    font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--success);font-weight:700;margin-bottom:8px;
+  }
+  #resultRut{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:28px;
+    font-weight:600;
+    letter-spacing:.02em;
+    color:var(--ink);
+    margin:4px 0 16px;
+    word-break:break-all;
+  }
+  .result-actions{
+    display:flex;
+    gap:10px;
+  }
+  .result-actions button{flex:1;}
+  #copiedToast{
+    font-size:12.5px;
+    color:var(--success);
+    font-weight:600;
+    text-align:center;
+    height:16px;
+    margin-top:8px;
+  }
+  footer{
+    text-align:center;
+    font-size:12px;
+    color:var(--ink-soft);
+    padding:0 20px 20px;
+  }
+  footer a{color:var(--accent);text-decoration:none;}
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="mark">IE</div>
+    <div class="topbar-text">
+      <div class="kicker">Escáner de código de barras</div>
+      <div class="title">Acreditación Investidura</div>
+    </div>
+  </div>
+
+  <main>
+    <div class="card">
+      <p class="lead">
+        Escanea el código de barras de la cédula de identidad o la credencial DUOC.
+        Al leer el RUT, cópialo y pégalo en la pestaña <strong>Buscar</strong> de la
+        herramienta de acreditación.
+      </p>
+    </div>
+
+    <div id="videoWrap">
+      <video id="scanVideo" autoplay muted playsinline></video>
+      <div class="scan-line"></div>
+    </div>
+
+    <div id="statusText"></div>
+    <div id="unavailBox"></div>
+
+    <button id="toggleBtn" class="btn-primary">Iniciar escaneo</button>
+
+    <div id="resultBox">
+      <div class="label">RUT detectado</div>
+      <div id="resultRut">—</div>
+      <div class="result-actions">
+        <button id="copyBtn" class="btn-primary">Copiar RUT</button>
+        <button id="rescanBtn" class="btn-secondary">Escanear otro</button>
+      </div>
+      <div id="copiedToast"></div>
+    </div>
+  </main>
+
+  <footer>
+    Herramienta interna — no compartir este enlace fuera del equipo de acreditación.
+  </footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  var codeReader = null;
+  var scanning = false;
+
+  var toggleBtn = document.getElementById('toggleBtn');
+  var statusText = document.getElementById('statusText');
+  var unavailBox = document.getElementById('unavailBox');
+  var videoWrap = document.getElementById('videoWrap');
+  var resultBox = document.getElementById('resultBox');
+  var resultRut = document.getElementById('resultRut');
+  var copyBtn = document.getElementById('copyBtn');
+  var rescanBtn = document.getElementById('rescanBtn');
+  var copiedToast = document.getElementById('copiedToast');
+
+  function extractRutToken(rawText){
+    var stripped = String(rawText || '').replace(/[.\-\s@]/g, '');
+    var m = stripped.match(/\d{7,8}[0-9kK]/);
+    return m ? m[0].toUpperCase() : null;
+  }
+
+  function scanAvailable(){
+    return !!(window.ZXing && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  }
+
+  function resetUI(){
+    resultBox.style.display = 'none';
+    unavailBox.style.display = 'none';
+    copiedToast.textContent = '';
+  }
+
+  async function startScanning(){
+    resetUI();
+
+    if (!scanAvailable()){
+      unavailBox.textContent = 'El escaneo no está disponible en este navegador. Prueba con Chrome o Safari actualizados.';
+      unavailBox.style.display = '';
+      return;
+    }
+
+    try {
+      var constraints = { video: { facingMode: { ideal: 'environment' } } };
+
+      // Pide el permiso de cámara de inmediato, lo más cerca posible del toque
+      // del botón (mejora compatibilidad con Safari/iOS).
+      var preflight = await navigator.mediaDevices.getUserMedia(constraints);
+      preflight.getTracks().forEach(function(t){ t.stop(); });
+
+      var hints = new Map();
+      var formats = [
+        ZXing.BarcodeFormat.PDF_417, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.QR_CODE,
+        ZXing.BarcodeFormat.DATA_MATRIX
+      ];
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      codeReader = new ZXing.BrowserMultiFormatReader(hints);
+
+      videoWrap.style.display = '';
+      statusText.textContent = 'Apunta la cámara al código de barras…';
+      toggleBtn.textContent = 'Detener escaneo';
+      toggleBtn.classList.add('stop');
+      scanning = true;
+
+      var started = false;
+      if (typeof codeReader.decodeFromConstraints === 'function'){
+        try {
+          await codeReader.decodeFromConstraints(constraints, 'scanVideo', onScanResult);
+          started = true;
+        } catch(e){ started = false; }
+      }
+      if (!started){
+        await codeReader.decodeFromVideoDevice(undefined, 'scanVideo', onScanResult);
+      }
+    } catch(e){
+      statusText.textContent = '';
+      var detail = (e && (e.name || e.message)) ? (e.name || '') + (e.message ? ': ' + e.message : '') : 'error desconocido';
+      unavailBox.textContent = 'No se pudo activar la cámara (' + detail + '). Revisa que hayas aceptado el permiso de cámara para este sitio.';
+      unavailBox.style.display = '';
+      videoWrap.style.display = 'none';
+      scanning = false;
+      toggleBtn.textContent = 'Iniciar escaneo';
+      toggleBtn.classList.remove('stop');
+    }
+  }
+
+  function stopScanning(){
+    if (codeReader){
+      try { codeReader.reset(); } catch(e){}
+    }
+    scanning = false;
+    videoWrap.style.display = 'none';
+    statusText.textContent = '';
+    toggleBtn.textContent = 'Iniciar escaneo';
+    toggleBtn.classList.remove('stop');
+  }
+
+  function onScanResult(result, err){
+    if (!result) return;
+    var text = result.getText ? result.getText() : String(result);
+    var rut = extractRutToken(text);
+    if (!rut) return; // sigue escaneando si no encontró un RUT plausible
+
+    stopScanning();
+    resultRut.textContent = rut;
+    resultBox.style.display = '';
+    statusText.textContent = '';
+  }
+
+  toggleBtn.addEventListener('click', function(){
+    if (scanning) stopScanning(); else startScanning();
+  });
+
+  rescanBtn.addEventListener('click', function(){
+    resetUI();
+    startScanning();
+  });
+
+  copyBtn.addEventListener('click', async function(){
+    var text = resultRut.textContent;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      copiedToast.textContent = 'Copiado — pégalo en la pestaña Buscar.';
+    } catch(e){
+      copiedToast.textContent = 'No se pudo copiar automáticamente. Selecciona el RUT manualmente.';
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
