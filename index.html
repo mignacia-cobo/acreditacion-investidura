@@ -495,7 +495,10 @@
 
   <div class="footer-note">
     <span>Herramienta interna — no compartir el enlace fuera del equipo de acreditación.</span>
-    <button id="exportBtn">Exportar registro (CSV)</button>
+    <span>
+      <button id="bulkRutBtn">Cargar RUTs</button>
+      · <button id="exportBtn">Exportar registro (CSV)</button>
+    </span>
   </div>
 </div>
 
@@ -617,6 +620,97 @@ function learnedRutMatch(query){
   }
   return null;
 }
+
+/* ============================================================
+   Carga masiva de RUTs (staff) — pegar una lista y guardarla toda
+   de una vez, sin depender de nadie más.
+   ============================================================ */
+function looksLikeRutValue(s){
+  const cleaned = s.replace(/[.\-\s]/g,'');
+  return /^\d{6,9}[0-9kK]$/i.test(cleaned);
+}
+
+function parseBulkRutLine(line){
+  const parts = line.split(/\t|;|,/).map(s=>s.trim()).filter(s=>s.length);
+  if(parts.length < 2) return null;
+  let rutIdx = -1;
+  for(let i=0;i<parts.length;i++){ if(looksLikeRutValue(parts[i])){ rutIdx = i; break; } }
+  if(rutIdx === -1) return null;
+  const rut = parts[rutIdx];
+  const other = parts.filter((_,i)=>i!==rutIdx).join(' ').trim();
+  if(!other) return null;
+  return { other, rut };
+}
+
+function matchStudentForBulk(other){
+  const trimmed = other.trim();
+  if(/^\d+$/.test(trimmed)){
+    const n = Number(trimmed);
+    if(rosterByN[n]) return n;
+  }
+  const nq = norm(trimmed);
+  if(!nq) return null;
+  const exact = ROSTER.filter(s => norm(s.nombre) === nq);
+  if(exact.length === 1) return exact[0].n;
+  const contains = ROSTER.filter(s => norm(s.nombre).includes(nq) || nq.includes(norm(s.apellido)));
+  if(contains.length === 1) return contains[0].n;
+  return null;
+}
+
+function closeBulkRutModal(){
+  document.getElementById('modalRoot').innerHTML = '';
+}
+
+function openBulkRutModal(){
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="modal-bg" id="bulkRutBg">
+      <div class="modal" style="max-width:480px;">
+        <h3>Cargar RUTs de alumnos</h3>
+        <p>Pega una lista, una fila por alumno. Cada fila puede tener el <strong>N°</strong> o el <strong>nombre completo</strong>, seguido del <strong>RUT</strong> — separados por tabulación, punto y coma o coma (se puede pegar directo desde una columna de Excel). Ejemplos:<br>
+        <span class="mono">85;12.345.678-9</span><br>
+        <span class="mono">Aaron Caleb Perez Gonzalez;12345678-9</span></p>
+        <textarea id="bulkRutText" style="width:100%; min-height:150px; font-family:'IBM Plex Mono'; font-size:13px; border:1px solid var(--border); border-radius:9px; padding:10px; background:var(--surface-2); color:var(--ink);" placeholder="Pega aquí la lista…"></textarea>
+        <div id="bulkRutResult" style="font-size:12.5px; color:var(--ink-soft); margin-top:10px; max-height:120px; overflow:auto;"></div>
+        <div class="modal-actions" style="margin-top:14px;">
+          <button class="btn-cancel" id="bulkRutCancel">Cerrar</button>
+          <button class="confirm-btn off" style="flex:1; margin-top:0;" id="bulkRutSave">Guardar todos</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('bulkRutCancel').addEventListener('click', closeBulkRutModal);
+  document.getElementById('bulkRutBg').addEventListener('click', (e) => { if(e.target.id === 'bulkRutBg') closeBulkRutModal(); });
+  document.getElementById('bulkRutSave').addEventListener('click', applyBulkRut);
+}
+
+async function applyBulkRut(){
+  const textEl = document.getElementById('bulkRutText');
+  const resultEl = document.getElementById('bulkRutResult');
+  const lines = textEl.value.split('\n').map(l=>l.trim()).filter(l=>l.length);
+  if(lines.length === 0){ resultEl.textContent = 'Pega al menos una fila primero.'; return; }
+
+  const saveBtn = document.getElementById('bulkRutSave');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Guardando…';
+
+  let saved = 0;
+  const unmatched = [];
+  for(const line of lines){
+    const parsed = parseBulkRutLine(line);
+    if(!parsed){ unmatched.push(esc(line) + ' — formato no reconocido'); continue; }
+    const n = matchStudentForBulk(parsed.other);
+    if(n == null){ unmatched.push(esc(line) + ' — sin coincidencia de alumno'); continue; }
+    await saveCheckin(n, { rut: parsed.rut });
+    saved++;
+  }
+
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Guardar todos';
+  resultEl.innerHTML = `Guardados: <strong>${saved}</strong> de ${lines.length}.` +
+    (unmatched.length ? '<br><br>Sin coincidencia (búscalos a mano en la pestaña Buscar):<br>' + unmatched.join('<br>') : '');
+  if(unmatched.length === 0){ toast('RUTs guardados'); setTimeout(closeBulkRutModal, 1500); }
+}
+
+document.getElementById('bulkRutBtn').addEventListener('click', openBulkRutModal);
 
 /* ============================================================
    Inicializar base compartida (capability db)
