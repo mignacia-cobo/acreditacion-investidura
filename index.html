@@ -809,7 +809,15 @@ function matchStudents(query){
 
 function renderResults(){
   const list = document.getElementById('resultList');
-  const ns = matchStudents(searchInput.value);
+  let ns = matchStudents(searchInput.value);
+  // Si hay un alumno "abierto" (por ejemplo, recién detectado por escaneo) pero
+  // no aparece en la lista filtrada actual (que por defecto solo muestra 8
+  // sugerencias), lo agregamos igual al principio para que su panel de
+  // confirmación siempre se pueda mostrar, sin depender de en qué posición
+  // del roster esté.
+  if(openStudent != null && !ns.includes(openStudent)){
+    ns = [openStudent, ...ns];
+  }
   if(ns.length===0){
     list.innerHTML = '<div class="empty-hint">No se encontró ningún alumno con ese nombre o RUT.<br>Revisa la ortografía o busca por apellido.</div>';
     return;
@@ -1048,6 +1056,10 @@ function handleScannedRut(rut, raw){
     searchInput.value = '';
     renderResults();
     toast('Encontrado: '+rosterByN[matchN].nombre);
+    // Asegura que el panel de confirmación (con los acompañantes) quede
+    // visible de inmediato, sin que el staff tenga que desplazarse a mano.
+    const openedDetail = document.querySelector(`[data-detail-n="${matchN}"]`);
+    if(openedDetail) openedDetail.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } else {
     pendingScanRut = rut;
     stopScanning();
