@@ -9,393 +9,1131 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#f4f6f9;
+    --bg:#f4f6fb;
     --surface:#ffffff;
-    --ink:#12161c;
-    --ink-soft:#4b5563;
+    --surface-2:#eaeef7;
+    --ink:#0b0e14;
+    --ink-soft:#4b5468;
+    --ink-faint:#7b8296;
     --accent:#1c7ce0;
-    --accent-soft:#eaf3fd;
-    --success:#1a8a5a;
-    --success-soft:#e7f6ef;
-    --danger:#c0362c;
-    --danger-soft:#fbeae8;
-    --border:#e1e5eb;
-    --topbar:#0a0d13;
-    --topbar-ink:#f4f6f9;
-    --radius:14px;
+    --accent-ink:#ffffff;
+    --accent-soft:#5fb0ff;
+    --accent-wash:#e7f1fd;
+    --success:#158a5f;
+    --success-wash:#e2f5ec;
+    --warn:#a9700a;
+    --warn-wash:#fbf0dd;
+    --danger:#c4364f;
+    --danger-wash:#fbe8ec;
+    --border:#dde3ee;
+    --shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.12);
+    --radius: 14px;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --bg:#0d1117;
-      --surface:#161b22;
-      --ink:#e8edf3;
-      --ink-soft:#9aa5b1;
+      --bg:#0a0d13;
+      --surface:#12161f;
+      --surface-2:#1a2029;
+      --ink:#edf1f9;
+      --ink-soft:#a7aec2;
+      --ink-faint:#767f96;
       --accent:#5fb0ff;
-      --accent-soft:#122437;
-      --success:#3fcf8e;
-      --success-soft:#0f2b21;
-      --danger:#ff6b60;
-      --danger-soft:#341415;
-      --border:#2a313c;
-      --topbar:#05070a;
-      --topbar-ink:#f4f6f9;
+      --accent-ink:#06121f;
+      --accent-soft:#1c7ce0;
+      --accent-wash:#132436;
+      --success:#3fcf9a;
+      --success-wash:#0f2a22;
+      --warn:#e3ab4d;
+      --warn-wash:#2d2312;
+      --danger:#f0798e;
+      --danger-wash:#301620;
+      --border:#242c3a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+      color-scheme: dark;
     }
   }
   :root[data-theme="dark"]{
-    --bg:#0d1117;
-    --surface:#161b22;
-    --ink:#e8edf3;
-    --ink-soft:#9aa5b1;
+    --bg:#0a0d13;
+    --surface:#12161f;
+    --surface-2:#1a2029;
+    --ink:#edf1f9;
+    --ink-soft:#a7aec2;
+    --ink-faint:#767f96;
     --accent:#5fb0ff;
-    --accent-soft:#122437;
-    --success:#3fcf8e;
-    --success-soft:#0f2b21;
-    --danger:#ff6b60;
-    --danger-soft:#341415;
-    --border:#2a313c;
-    --topbar:#05070a;
-    --topbar-ink:#f4f6f9;
+    --accent-ink:#06121f;
+    --accent-soft:#1c7ce0;
+    --accent-wash:#132436;
+    --success:#3fcf9a;
+    --success-wash:#0f2a22;
+    --warn:#e3ab4d;
+    --warn-wash:#2d2312;
+    --danger:#f0798e;
+    --danger-wash:#301620;
+    --border:#242c3a;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    color-scheme: dark;
   }
+
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
   body{
+    margin:0;
     background:var(--bg);
     color:var(--ink);
     font-family:'Inter',system-ui,sans-serif;
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
+    -webkit-tap-highlight-color: transparent;
   }
-  .topbar{
-    background:var(--topbar);
-    color:var(--topbar-ink);
-    padding:16px 20px;
-    display:flex;
-    align-items:center;
-    gap:12px;
-  }
-  .mark{
-    width:34px;height:34px;border-radius:9px;
-    background:var(--accent);
-    color:#04101c;
-    display:flex;align-items:center;justify-content:center;
-    font-family:'Manrope',sans-serif;font-weight:800;font-size:14px;
-    flex-shrink:0;
-  }
-  .topbar-text .kicker{
-    font-size:11px;letter-spacing:.06em;text-transform:uppercase;
-    color:#9db6d4;font-weight:600;
-  }
-  .topbar-text .title{
-    font-family:'Manrope',sans-serif;font-weight:700;font-size:16px;
-  }
-  main{
-    flex:1;
-    max-width:520px;
-    width:100%;
-    margin:0 auto;
-    padding:20px 16px 32px;
-    display:flex;
-    flex-direction:column;
-    gap:16px;
-  }
-  .card{
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:18px;
-  }
-  .lead{
-    font-size:14px;
-    color:var(--ink-soft);
-    line-height:1.5;
+  h1,h2,h3,.display{
+    font-family:'Manrope',system-ui,sans-serif;
+    text-wrap:balance;
     margin:0;
   }
-  #videoWrap{
-    display:none;
-    position:relative;
-    border-radius:var(--radius);
-    overflow:hidden;
-    background:#000;
-    aspect-ratio:4/3;
+  .mono{ font-family:'IBM Plex Mono',ui-monospace,monospace; font-variant-numeric: tabular-nums; }
+  button{ font-family:inherit; }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    background:#0a0d13;
+    color:#eef3fb;
+    padding:14px 16px 0;
+    position:sticky; top:0; z-index:20;
   }
-  video{
-    width:100%;height:100%;object-fit:cover;display:block;
+  .topbar-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; max-width:1080px; margin:0 auto;
   }
-  .scan-line{
-    position:absolute;left:8%;right:8%;top:50%;height:2px;
-    background:var(--accent);
-    box-shadow:0 0 8px var(--accent);
-    opacity:.85;
+  .brand{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .brand-mark{
+    width:34px; height:34px; border-radius:9px;
+    background:linear-gradient(145deg,#1c7ce0,#5fb0ff);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Manrope'; font-weight:800; font-size:15px; color:#06121f;
+    flex:none;
   }
-  #statusText{
-    font-size:13px;
-    color:var(--ink-soft);
-    text-align:center;
-    min-height:18px;
+  .brand-text{ min-width:0; }
+  .brand-text .kicker{
+    font-size:10.5px; letter-spacing:.11em; text-transform:uppercase;
+    color:#5fb0ff; font-weight:700;
   }
-  button{
-    font-family:inherit;
-    font-size:15px;
-    font-weight:600;
-    border-radius:10px;
-    border:none;
-    padding:13px 18px;
-    cursor:pointer;
+  .brand-text .title{
+    font-family:'Manrope'; font-weight:700; font-size:14.5px; color:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .btn-primary{
-    background:var(--accent);
-    color:#04101c;
-    width:100%;
+  .conn-pill{
+    display:flex; align-items:center; gap:6px;
+    font-size:11.5px; color:#a7aec2; flex:none;
+    padding:5px 10px; border-radius:999px; background:#171d29;
+    border:1px solid #232a37;
   }
-  .btn-primary.stop{
-    background:var(--danger);
-    color:#fff;
+  .conn-dot{ width:7px; height:7px; border-radius:50%; background:var(--ink-faint); flex:none; }
+  .conn-dot.ok{ background:#3fcf9a; box-shadow:0 0 0 3px rgba(63,207,154,.18); }
+  .conn-dot.bad{ background:#f0798e; }
+
+  .tabs{
+    max-width:1080px; margin:12px auto 0; display:flex; gap:4px;
+    border-bottom:1px solid #1c2330;
   }
-  .btn-secondary{
-    background:var(--accent-soft);
-    color:var(--accent);
-    width:100%;
+  .tab{
+    flex:1; text-align:center; padding:10px 6px 12px; cursor:pointer;
+    color:#8a92a6; font-weight:600; font-size:13.5px; border-bottom:2.5px solid transparent;
+    user-select:none;
   }
-  #unavailBox{
-    display:none;
-    background:var(--danger-soft);
-    color:var(--danger);
-    border-radius:10px;
-    padding:12px 14px;
-    font-size:13.5px;
-    line-height:1.5;
+  .tab.active{ color:#fff; border-color:#5fb0ff; }
+
+  .wrap{ max-width:1080px; margin:0 auto; padding:16px; padding-bottom:64px; }
+  @media (min-width:720px){ .wrap{ padding:24px; } }
+
+  /* ---------- Cards / generic ---------- */
+  .card{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); box-shadow:var(--shadow);
   }
-  #resultBox{
-    display:none;
-    background:var(--success-soft);
-    border:1px solid var(--success);
-    border-radius:var(--radius);
-    padding:20px;
-    text-align:center;
+  .muted{ color:var(--ink-soft); }
+  .faint{ color:var(--ink-faint); }
+
+  .stat-row{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .stat{
+    flex:1; min-width:130px; background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:12px 14px;
   }
-  #resultBox .label{
-    font-size:12px;text-transform:uppercase;letter-spacing:.06em;
-    color:var(--success);font-weight:700;margin-bottom:8px;
+  .stat .num{ font-family:'Manrope'; font-weight:800; font-size:26px; line-height:1.1; }
+  .stat .lbl{ font-size:11.5px; color:var(--ink-soft); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
+
+  /* ---------- Search ---------- */
+  .search-box{
+    display:flex; gap:8px; align-items:center;
+    background:var(--surface); border:1.5px solid var(--border); border-radius:12px;
+    padding:11px 14px; box-shadow:var(--shadow);
   }
-  #resultRut{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:28px;
-    font-weight:600;
-    letter-spacing:.02em;
-    color:var(--ink);
-    margin:4px 0 16px;
-    word-break:break-all;
+  .search-box input{
+    flex:1; border:none; outline:none; background:transparent; color:var(--ink);
+    font-size:16px; font-family:'Inter';
   }
-  .result-actions{
-    display:flex;
-    gap:10px;
+  .search-box input::placeholder{ color:var(--ink-faint); }
+  .search-icon{ color:var(--ink-faint); flex:none; }
+  .clear-btn{
+    background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:18px;
+    padding:2px 4px; line-height:1;
   }
-  .result-actions button{flex:1;}
-  #copiedToast{
-    font-size:12.5px;
-    color:var(--success);
-    font-weight:600;
-    text-align:center;
-    height:16px;
-    margin-top:8px;
+
+  .subtabs{ display:flex; gap:8px; margin:12px 0; }
+  .subtab{
+    padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600;
+    background:var(--surface-2); color:var(--ink-soft); cursor:pointer; border:1px solid transparent;
+    user-select:none;
   }
-  footer{
-    text-align:center;
-    font-size:12px;
-    color:var(--ink-soft);
-    padding:0 20px 20px;
+  .subtab.active{ background:var(--accent-wash); color:var(--accent); border-color:var(--accent-soft); }
+
+  .result-list{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .result-row{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:12px 14px; cursor:pointer; transition:border-color .12s;
   }
-  footer a{color:var(--accent);text-decoration:none;}
+  .result-row:hover{ border-color:var(--accent-soft); }
+  .result-row.open{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-wash); }
+  .result-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .result-name{ font-weight:700; font-size:15px; }
+  .result-sub{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .badge{
+    font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; flex:none;
+    white-space:nowrap;
+  }
+  .badge.presente{ background:var(--success-wash); color:var(--success); }
+  .badge.pendiente{ background:var(--surface-2); color:var(--ink-faint); }
+
+  .empty-hint{
+    text-align:center; padding:32px 16px; color:var(--ink-faint); font-size:14px;
+  }
+
+  /* ---------- Detail panel ---------- */
+  .detail{
+    margin-top:10px; border-radius:12px; border:1.5px solid var(--accent-soft);
+    background:var(--surface); padding:16px; box-shadow:var(--shadow);
+  }
+  .detail-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:4px; }
+  .detail-name{ font-family:'Manrope'; font-weight:800; font-size:18px; }
+  .detail-meta{ font-size:13px; color:var(--ink-soft); margin-top:3px; }
+  .close-x{
+    background:none; border:none; color:var(--ink-faint); font-size:20px; cursor:pointer;
+    padding:2px 6px; line-height:1; flex:none;
+  }
+
+  .confirm-btn{
+    width:100%; margin-top:14px; padding:14px; border:none; border-radius:12px;
+    font-weight:700; font-size:15.5px; cursor:pointer; display:flex; align-items:center;
+    justify-content:center; gap:8px;
+  }
+  .confirm-btn.off{ background:var(--accent); color:var(--accent-ink); }
+  .confirm-btn.on{ background:var(--success-wash); color:var(--success); border:1.5px solid var(--success); }
+
+  .field-row{ display:flex; align-items:center; gap:10px; margin-top:12px; }
+  .field-row label{ font-size:12.5px; font-weight:600; color:var(--ink-soft); min-width:70px; }
+  .field-row input[type=text]{
+    flex:1; border:1px solid var(--border); border-radius:9px; padding:8px 10px;
+    font-size:14px; background:var(--surface-2); color:var(--ink); font-family:'IBM Plex Mono';
+    min-width:0;
+  }
+
+  .section-label{
+    font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--ink-faint); margin:16px 0 8px;
+  }
+  .companion-row{
+    display:flex; align-items:center; gap:8px; margin-bottom:8px; padding:8px;
+    background:var(--surface-2); border-radius:9px;
+  }
+  .companion-row input[type=text]{
+    border:1px solid var(--border); border-radius:7px; padding:7px 8px; font-size:13.5px;
+    background:var(--surface); color:var(--ink); font-family:'Inter'; min-width:0;
+  }
+  .companion-row .cn{ flex:1.4; }
+  .companion-row .cr{ flex:1; font-family:'IBM Plex Mono'; }
+  .chk{
+    width:34px; height:34px; border-radius:9px; border:1.5px solid var(--border); background:var(--surface);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; font-size:16px;
+  }
+  .chk.on{ background:var(--success-wash); border-color:var(--success); color:var(--success); }
+  .rm-btn{
+    background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:17px; flex:none; padding:4px;
+  }
+  .add-companion{
+    display:flex; align-items:center; gap:6px; background:none; border:1.5px dashed var(--border);
+    border-radius:9px; padding:9px; width:100%; cursor:pointer; color:var(--accent); font-weight:600;
+    font-size:13.5px; margin-top:4px;
+  }
+
+  /* ---------- Scan ---------- */
+  .scan-area{ text-align:center; }
+  .video-wrap{
+    position:relative; width:100%; max-width:420px; margin:12px auto 0; aspect-ratio:1/1;
+    background:#000; border-radius:14px; overflow:hidden; border:1px solid var(--border);
+  }
+  .video-wrap video{ width:100%; height:100%; object-fit:cover; }
+  .scan-frame{
+    position:absolute; inset:12%; border:2.5px solid var(--accent-soft); border-radius:12px;
+    box-shadow:0 0 0 999px rgba(0,0,0,.28); pointer-events:none;
+  }
+  .scan-btn{
+    margin-top:14px; padding:12px 22px; border-radius:11px; border:none; background:var(--accent);
+    color:var(--accent-ink); font-weight:700; font-size:14.5px; cursor:pointer;
+  }
+  .scan-btn.stop{ background:var(--danger); color:#fff; }
+  .scan-status{ margin-top:10px; font-size:13px; color:var(--ink-soft); min-height:18px; }
+  .scan-banner{
+    margin-top:14px; padding:12px 14px; border-radius:10px; background:var(--warn-wash); color:var(--warn);
+    font-size:13.5px; text-align:left;
+  }
+  .scan-unavailable{
+    padding:26px 18px; text-align:center; color:var(--ink-soft); font-size:13.5px;
+  }
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:var(--bg); padding:10px 18px; border-radius:999px;
+    font-size:13.5px; font-weight:600; box-shadow:var(--shadow); z-index:100;
+    opacity:0; transition:opacity .2s, transform .2s; pointer-events:none;
+  }
+  :root[data-theme="dark"] .toast, @media (prefers-color-scheme:dark){ .toast{ } }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-6px); }
+
+  /* ---------- Locutor ---------- */
+  .locutor-bar{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px;
+  }
+  .ctrl{
+    display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border);
+    border-radius:11px; padding:8px 12px;
+  }
+  .ctrl label{ font-size:12px; font-weight:600; color:var(--ink-soft); white-space:nowrap; }
+  .stepper{ display:flex; align-items:center; gap:8px; }
+  .stepper button{
+    width:26px; height:26px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--ink); font-weight:700; cursor:pointer; font-size:15px; line-height:1;
+  }
+  .stepper .n{ font-family:'IBM Plex Mono'; font-weight:600; min-width:20px; text-align:center; }
+  select{
+    border:1px solid var(--border); background:var(--surface-2); color:var(--ink); border-radius:8px;
+    padding:6px 8px; font-size:12.5px; font-family:'Inter'; font-weight:600;
+  }
+
+  .progress-wrap{ margin-bottom:16px; }
+  .progress-track{
+    height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden; margin-top:8px;
+  }
+  .progress-fill{ height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-soft)); border-radius:999px; transition:width .3s; }
+
+  .groups-grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:12px;
+  }
+  .group-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px; box-shadow:var(--shadow);
+  }
+  .group-card.done{ opacity:.5; }
+  .group-head{
+    display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;
+    padding-bottom:8px; border-bottom:1px solid var(--border);
+  }
+  .group-title{ font-family:'Manrope'; font-weight:800; font-size:15px; }
+  .group-count{ font-size:11.5px; color:var(--ink-faint); font-family:'IBM Plex Mono'; }
+  .group-esp{
+    font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--accent); margin-bottom:6px;
+  }
+  .name-item{
+    display:flex; align-items:center; gap:9px; padding:6px 2px; font-size:15px; border-radius:7px;
+  }
+  .name-item .idx{ font-family:'IBM Plex Mono'; color:var(--ink-faint); font-size:12px; width:18px; flex:none; }
+  .name-item .apn{ font-weight:700; }
+  .name-item.called{ text-decoration:line-through; color:var(--ink-faint); }
+  .name-item.called .apn{ font-weight:700; }
+  .name-item .new-tag{
+    font-size:9.5px; font-weight:700; color:var(--success); background:var(--success-wash);
+    padding:1px 6px; border-radius:6px; margin-left:auto; flex:none;
+  }
+  .group-mark{
+    width:100%; margin-top:10px; padding:7px; border-radius:8px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--ink-soft); font-size:12px; font-weight:600; cursor:pointer;
+  }
+
+  /* ---------- Modal (confirm) ---------- */
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(10,13,20,.5); display:flex; align-items:center;
+    justify-content:center; z-index:200; padding:20px;
+  }
+  .modal{
+    background:var(--surface); border-radius:14px; padding:20px; max-width:340px; width:100%;
+    box-shadow:var(--shadow);
+  }
+  .modal h3{ font-size:16px; margin-bottom:8px; }
+  .modal p{ font-size:13.5px; color:var(--ink-soft); margin:0 0 16px; }
+  .modal-actions{ display:flex; gap:8px; }
+  .modal-actions button{
+    flex:1; padding:10px; border-radius:9px; border:none; font-weight:700; font-size:13.5px; cursor:pointer;
+  }
+  .btn-cancel{ background:var(--surface-2); color:var(--ink); }
+  .btn-danger{ background:var(--danger); color:#fff; }
+
+  .footer-note{
+    margin-top:26px; padding-top:14px; border-top:1px solid var(--border); font-size:12px;
+    color:var(--ink-faint); display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  }
+  .footer-note button{
+    background:none; border:none; color:var(--ink-faint); text-decoration:underline; cursor:pointer;
+    font-size:12px; padding:0;
+  }
+
+  .brand-mark{
+    height:36px; width:auto; border-radius:7px; background:#fff;
+    padding:4px 8px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
+  .brand-mark img{ height:100%; width:auto; display:block; }
+  .scan-caption{
+    position:absolute; top:7%; left:50%; transform:translateX(-50%);
+    background:rgba(10,13,20,.6); color:#fff; font-size:11.5px; font-weight:600;
+    padding:4px 11px; border-radius:999px; pointer-events:none; white-space:nowrap;
+    letter-spacing:.01em;
+  }
 </style>
 </head>
 <body>
 
-  <div class="topbar">
-    <div class="mark">IE</div>
-    <div class="topbar-text">
-      <div class="kicker">Escáner de código de barras</div>
-      <div class="title">Acreditación Investidura</div>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div class="brand">
+      <div class="brand-mark"><img src="data:image/png;base64,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" alt="Duoc UC"></div>
+      <div class="brand-text">
+        <div class="kicker">Investidura de Especialidad</div>
+        <div class="title">Acreditación de asistentes</div>
+      </div>
+    </div>
+    <div class="conn-pill"><span class="conn-dot" id="connDot"></span><span id="connLabel">conectando…</span></div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-view="acreditacion">Acreditación</div>
+    <div class="tab" data-view="locutor">Locutor</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ===================== VISTA ACREDITACIÓN ===================== -->
+  <div id="view-acreditacion">
+    <div class="stat-row">
+      <div class="stat"><div class="num mono" id="statPresentes">0</div><div class="lbl">Alumnos presentes</div></div>
+      <div class="stat"><div class="num mono" id="statTotal">—</div><div class="lbl">Total inscritos</div></div>
+      <div class="stat"><div class="num mono" id="statAcomp">0</div><div class="lbl">Acompañantes llegados</div></div>
+    </div>
+
+    <div class="subtabs">
+      <div class="subtab active" data-sub="buscar">🔍 Buscar</div>
+      <div class="subtab" data-sub="escanear">📷 Escanear</div>
+    </div>
+
+    <!-- Buscar -->
+    <div id="sub-buscar">
+      <div class="search-box">
+        <span class="search-icon">⌕</span>
+        <input id="searchInput" type="text" placeholder="Nombre, apellido o RUT del alumno…" autocomplete="off">
+        <button class="clear-btn" id="clearSearch" title="Limpiar">✕</button>
+      </div>
+      <div id="scanPendingBanner" style="display:none" class="scan-banner"></div>
+      <div class="result-list" id="resultList"></div>
+    </div>
+
+    <!-- Escanear -->
+    <div id="sub-escanear" style="display:none">
+      <div class="card scan-area" style="padding:18px;">
+        <div class="muted" style="font-size:13px;">Apunta la cámara al código de barras de la cédula de identidad o al QR de la credencial DUOC. Colócalo dentro del recuadro.</div>
+        <div class="video-wrap" id="videoWrap" style="display:none">
+          <video id="scanVideo" muted playsinline></video>
+          <div class="scan-frame"></div>
+          <div class="scan-caption">Coloca el código aquí</div>
+        </div>
+        <div id="scanUnavailable" class="scan-unavailable" style="display:none">
+          El escaneo no está disponible en este dispositivo o navegador.<br>Usa la pestaña <strong>Buscar</strong> para acreditar por nombre o RUT.
+        </div>
+        <button class="scan-btn" id="scanToggleBtn">Iniciar escaneo</button>
+        <div class="scan-status" id="scanStatus"></div>
+      </div>
     </div>
   </div>
 
-  <main>
-    <div class="card">
-      <p class="lead">
-        Escanea el código de barras de la cédula de identidad o la credencial DUOC.
-        Al leer el RUT, cópialo y pégalo en la pestaña <strong>Buscar</strong> de la
-        herramienta de acreditación.
-      </p>
-    </div>
-
-    <div id="videoWrap">
-      <video id="scanVideo" autoplay muted playsinline></video>
-      <div class="scan-line"></div>
-    </div>
-
-    <div id="statusText"></div>
-    <div id="unavailBox"></div>
-
-    <button id="toggleBtn" class="btn-primary">Iniciar escaneo</button>
-
-    <div id="resultBox">
-      <div class="label">RUT detectado</div>
-      <div id="resultRut">—</div>
-      <div class="result-actions">
-        <button id="copyBtn" class="btn-primary">Copiar RUT</button>
-        <button id="rescanBtn" class="btn-secondary">Escanear otro</button>
+  <!-- ===================== VISTA LOCUTOR ===================== -->
+  <div id="view-locutor" style="display:none">
+    <div class="progress-wrap card" style="padding:14px 16px;">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <div class="display" style="font-size:19px; font-weight:800;"><span id="locPresentes" class="mono">0</span> <span class="muted" style="font-weight:500; font-size:14px;">de <span id="locTotal" class="mono">—</span> alumnos presentes</span></div>
       </div>
-      <div id="copiedToast"></div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     </div>
-  </main>
 
-  <footer>
-    Herramienta interna — no compartir este enlace fuera del equipo de acreditación.
-  </footer>
+    <div class="locutor-bar">
+      <div class="ctrl">
+        <label>Tamaño de grupo</label>
+        <div class="stepper">
+          <button id="grpMinus">−</button>
+          <span class="n mono" id="grpSizeLabel">10</span>
+          <button id="grpPlus">+</button>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Orden</label>
+        <select id="orderSelect">
+          <option value="apellido">Alfabético (apellido)</option>
+          <option value="especialidad">Por especialidad</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="groups-grid" id="groupsGrid"></div>
+    <div id="locutorEmpty" class="empty-hint" style="display:none">Todavía no hay alumnos acreditados. Los grupos van a aparecer aquí a medida que lleguen.</div>
+  </div>
+
+  <div class="footer-note">
+    <span>Herramienta interna — no compartir el enlace fuera del equipo de acreditación.</span>
+    <button id="exportBtn">Exportar registro (CSV)</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="modalRoot"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script>
 (function(){
-  'use strict';
+"use strict";
 
-  var codeReader = null;
-  var scanning = false;
+/* ============================================================
+   ROSTER — Listado Maestro (112 alumnos), datos reales.
+   RUT y acompañantes NO están en el libro todavía: se capturan
+   en vivo el día del evento y quedan guardados en la base
+   compartida del check-in.
+   ============================================================ */
+const ROSTER = [{"n": 85, "nombre": "Aaron Caleb Perez Gonzalez", "correo": "aar.perez@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Perez", "rut": "", "companions": [{"id": "p85-0", "nombre": "Silvia javiera gonzalez araya", "rut": "11.623.890-k", "arrived": false, "arrivedAt": null}, {"id": "p85-1", "nombre": "Paz belen tapia pizarro", "rut": "21.401.148-4", "arrived": false, "arrivedAt": null}]}, {"n": 1, "nombre": "Alan Miguel Eduardo Cubillos Neira", "correo": "ala.cubillos@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Cubillos", "rut": "", "companions": [{"id": "p1-0", "nombre": "Felipe Eduardo Cubillos Diaz", "rut": "15071581-4", "arrived": false, "arrivedAt": null}, {"id": "p1-1", "nombre": "Karen Katherine Neira Saavedra", "rut": "14000542-8", "arrived": false, "arrivedAt": null}]}, {"n": 2, "nombre": "Alexis Isaac Bastian Molina Milanca", "correo": "alexi.molinam@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Molina", "rut": "", "companions": [{"id": "p2-0", "nombre": "Alexis Rolando Molina Silva", "rut": "15.128.334-9", "arrived": false, "arrivedAt": null}, {"id": "p2-1", "nombre": "Ida Luz Milanca Melillanca", "rut": "10.564.061-7", "arrived": false, "arrivedAt": null}]}, {"n": 3, "nombre": "Angel Quintero Vasquez", "correo": "ang.quintero@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Quintero", "rut": "", "companions": [{"id": "p3-0", "nombre": "Maibelis Quintero", "rut": "27.111.256-4", "arrived": false, "arrivedAt": null}, {"id": "p3-1", "nombre": "Addysmar Lopez", "rut": "P-166805125", "arrived": false, "arrivedAt": null}]}, {"n": 4, "nombre": "Anibal Jesus Romero Carvajal", "correo": "ani.romeroc@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Romero", "rut": "", "companions": [{"id": "p4-0", "nombre": "Katherine Gigliola Carvajal Diaz", "rut": "12.878.235-4", "arrived": false, "arrivedAt": null}, {"id": "p4-1", "nombre": "Antonia Belén Suárez Muñoz", "rut": "22.242.009-1", "arrived": false, "arrivedAt": null}]}, {"n": 107, "nombre": "Ankatu Paillacar Meza", "correo": "ank.paillacar@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Paillacar", "rut": "", "companions": [{"id": "p107-0", "nombre": "Bastian Aníbal Boggiano Cortés", "rut": "21.844.643-4", "arrived": false, "arrivedAt": null}, {"id": "p107-1", "nombre": "Martín Maximo German Palacios Otelo", "rut": "22.270.049-3", "arrived": false, "arrivedAt": null}]}, {"n": 5, "nombre": "Anyerson Cortez Gomez", "correo": "any.cortez@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Cortez", "rut": "", "companions": []}, {"n": 6, "nombre": "Ariel Alejandro Rojo Llabres", "correo": "ar.rojo@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Rojo", "rut": "", "companions": []}, {"n": 86, "nombre": "Arlette Isabella Patiño Duralde", "correo": "ar.patino@duocuc.cl", "seccion": "Vespertino", "especialidad": "Inteligencia Artificial", "apellido": "Patiño", "rut": "", "companions": [{"id": "p86-0", "nombre": "Fancy Patricia Duralde Quintana", "rut": "13725420-4", "arrived": false, "arrivedAt": null}, {"id": "p86-1", "nombre": "Camila Gigola", "rut": "28383060-8", "arrived": false, "arrivedAt": null}]}, {"n": 7, "nombre": "Bastian Benjamin Figueroa Bravo", "correo": "bastia.figueroa@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Figueroa", "rut": "", "companions": [{"id": "p7-0", "nombre": "Luis Bravo Lobos", "rut": "17.210.713-3", "arrived": false, "arrivedAt": null}, {"id": "p7-1", "nombre": "Priscila Bravo Lobos", "rut": "15.734.387-4", "arrived": false, "arrivedAt": null}]}, {"n": 8, "nombre": "Bayron Ignacio Roa Perez", "correo": "bay.roa@duocuc.cl", "seccion": "Diurno", "especialidad": "Por confirmar", "apellido": "Roa", "rut": "", "companions": []}, {"n": 9, "nombre": "Benjamin Alessandro Leiton Cuello", "correo": "be.leiton@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Leiton", "rut": "", "companions": [{"id": "p9-0", "nombre": "Juan Carlos cuello Gutiérrez", "rut": "6.458.369-7", "arrived": false, "arrivedAt": null}, {"id": "p9-1", "nombre": "Erika Inés Martinez Martinez", "rut": "8.181.446-5", "arrived": false, "arrivedAt": null}]}, {"n": 10, "nombre": "Benjamin Alexander Nuñez Morales", "correo": "benj.nunezm@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Nuñez", "rut": "", "companions": [{"id": "p10-0", "nombre": "Jose Sebastián Nuñez Guaico", "rut": "16.106.973-6", "arrived": false, "arrivedAt": null}, {"id": "p10-1", "nombre": "Gertrudis Beneralda Guaico Clavijo", "rut": "10.484.119-8", "arrived": false, "arrivedAt": null}]}, {"n": 11, "nombre": "Benjamin Exequiel Leiva Ayala", "correo": "ben.leivaa@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Leiva", "rut": "", "companions": [{"id": "p11-0", "nombre": "Angelica Maria Ayala Bastias", "rut": "10.573.496-4", "arrived": false, "arrivedAt": null}]}, {"n": 12, "nombre": "Benjamin Jesus Cabrera Delgado", "correo": "be.cabrerad@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Cabrera", "rut": "", "companions": [{"id": "p12-0", "nombre": "Nancy Ester del Carmen Delgado Sepulveda", "rut": "13.231.088-2", "arrived": false, "arrivedAt": null}]}, {"n": 13, "nombre": "Benjamin Jordan Cofre Rodriguez", "correo": "be.cofrer@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Cofre", "rut": "", "companions": [{"id": "p13-0", "nombre": "Carlos yordan Cofré astudillo", "rut": "13877824-k", "arrived": false, "arrivedAt": null}, {"id": "p13-1", "nombre": "Mariela Rodriguez Allende", "rut": "14000600-9", "arrived": false, "arrivedAt": null}]}, {"n": 14, "nombre": "Benjamin Sebastian Villalon Zamora", "correo": "benj.villalon@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Villalon", "rut": "", "companions": []}, {"n": 87, "nombre": "Brandon Alexander Emerson Henriquez Gonzalez", "correo": "br.henriquezg@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Henriquez", "rut": "", "companions": []}, {"n": 15, "nombre": "Brayan Nicolas Alarcon Aguilera", "correo": "br.alarcona@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Alarcon", "rut": "", "companions": []}, {"n": 16, "nombre": "Brian Alejandro Muñoz Zavala", "correo": "br.munozz@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Muñoz", "rut": "", "companions": []}, {"n": 88, "nombre": "Byron Rodrigo Cuadra Marchant", "correo": "by.cuadra@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Cuadra", "rut": "", "companions": [{"id": "p88-0", "nombre": "Ruth Angelica Marchant Gonzalez", "rut": "9.816.826-5", "arrived": false, "arrivedAt": null}, {"id": "p88-1", "nombre": "Anarella Catalina Cataldo Gomez", "rut": "20.730.846-3", "arrived": false, "arrivedAt": null}]}, {"n": 17, "nombre": "Carlos Acuna Cabrera", "correo": "carlo.acunac@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Acuna", "rut": "", "companions": []}, {"n": 113, "nombre": "Carlos Diego Guillermo Cartes Apablaza", "correo": "carl.cartes@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Cartes", "rut": "", "companions": [{"id": "p113-0", "nombre": "Jeanet del Carmen Cartes Arrué", "rut": "9.685.924-4", "arrived": false, "arrivedAt": null}]}, {"n": 18, "nombre": "Carolina Nicole Rivera Reyes", "correo": "caro.riverar@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Rivera", "rut": "", "companions": []}, {"n": 19, "nombre": "Cassie Muñoz Apablaza", "correo": "cas.munoz@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Muñoz", "rut": "", "companions": [{"id": "p19-0", "nombre": "Andrea Liz Apablaza Quiñones", "rut": "11.159.239-6", "arrived": false, "arrivedAt": null}, {"id": "p19-1", "nombre": "Pedro Alejandro Muñoz Castillo", "rut": "12.401.669-K", "arrived": false, "arrivedAt": null}]}, {"n": 89, "nombre": "Chiguin Carolina Chiang Cuellar", "correo": "ch.chiang@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Chiang", "rut": "", "companions": [{"id": "p89-0", "nombre": "Francisco Andres Guarda Vidal", "rut": "15.684.303-2", "arrived": false, "arrivedAt": null}]}, {"n": 20, "nombre": "Christian Alejandro Hernandez Valderrama", "correo": "chr.hernandezv@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Hernandez", "rut": "", "companions": []}, {"n": 21, "nombre": "Christian Nicolas Astorga Sandoval", "correo": "chr.astorga@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Astorga", "rut": "", "companions": []}, {"n": 90, "nombre": "Cindia Yohana Maldonado Diaz", "correo": "ci.maldonado@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Maldonado", "rut": "", "companions": []}, {"n": 22, "nombre": "Claudio Francisco Andres Saavedra Lizana", "correo": "cl.saavedral@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Saavedra", "rut": "", "companions": [{"id": "p22-0", "nombre": "mariano guzman", "rut": "20669565-k", "arrived": false, "arrivedAt": null}]}, {"n": 23, "nombre": "Cristian Marcelo Villavicencio Saez", "correo": "c.villavicencio@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Villavicencio", "rut": "", "companions": []}, {"n": 91, "nombre": "Cristian Sebastian Diaz Montt", "correo": "crs.diaz@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Diaz", "rut": "", "companions": []}, {"n": 24, "nombre": "Cristobal Bastian Perez Guerrero", "correo": "cris.perezg@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Perez", "rut": "", "companions": []}, {"n": 25, "nombre": "Cristofer Gabriel Pizarro Hollub", "correo": "cr.pizarroh@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Pizarro", "rut": "", "companions": [{"id": "p25-0", "nombre": "Vanesa Andrea Hollub Rodriguez", "rut": "15.750.580-7", "arrived": false, "arrivedAt": null}, {"id": "p25-1", "nombre": "Juan Luis Pizarro Cifuentes", "rut": "15.077.255-9", "arrived": false, "arrivedAt": null}]}, {"n": 92, "nombre": "Damian Mercado Botarro", "correo": "dam.mercado@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Mercado", "rut": "", "companions": [{"id": "p92-0", "nombre": "Claudia Mercedes Botarro Fernandez", "rut": "12453624-3", "arrived": false, "arrivedAt": null}, {"id": "p92-1", "nombre": "Christian Jorge Mercado Illanes", "rut": "12228752-1", "arrived": false, "arrivedAt": null}]}, {"n": 26, "nombre": "Daniel Alejandro Saa Sanchez", "correo": "da.saa@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Saa", "rut": "", "companions": [{"id": "p26-0", "nombre": "Rosa Veronica Sánchez Cossio", "rut": "107180850", "arrived": false, "arrivedAt": null}, {"id": "p26-1", "nombre": "Luis Manuel Saa Saa", "rut": "109441759", "arrived": false, "arrivedAt": null}]}, {"n": 27, "nombre": "Daniela Catalina Salinas Jara", "correo": "da.salinas@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Salinas", "rut": "", "companions": []}, {"n": 93, "nombre": "Daniela Paz Soto Barra", "correo": "daniel.sotob@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Soto", "rut": "", "companions": []}, {"n": 28, "nombre": "Danilo Esteban Guzman Solis", "correo": "dan.guzmans@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Guzman", "rut": "", "companions": []}, {"n": 29, "nombre": "Danko Enrique Ortiz Cataldo", "correo": "dank.ortiz@duocuc.cl", "seccion": "Diurno", "especialidad": "NO APLICA", "apellido": "Ortiz", "rut": "", "companions": []}, {"n": 30, "nombre": "David Antonio Perez Silva", "correo": "dav.perezs@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Perez", "rut": "", "companions": [{"id": "p30-0", "nombre": "Mirtha Eliana Silva Pereira", "rut": "12.452.422-9", "arrived": false, "arrivedAt": null}, {"id": "p30-1", "nombre": "Valentina Trinidad Reyes Cepeda", "rut": "21.880.007-6", "arrived": false, "arrivedAt": null}]}, {"n": 31, "nombre": "Diego Alberto Aguirre Calisto", "correo": "di.aguirrec@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Aguirre", "rut": "", "companions": [{"id": "p31-0", "nombre": "Pamela Estefanía Santiago Muñoz", "rut": "16.576.239-8", "arrived": false, "arrivedAt": null}, {"id": "p31-1", "nombre": "Vilma Myriam Calisto Araya", "rut": "7.239.290-6", "arrived": false, "arrivedAt": null}]}, {"n": 32, "nombre": "Diego David Llaiquel Vargas", "correo": "di.llaiquel@duocuc.cl", "seccion": "Diurno", "especialidad": "NO APLICA", "apellido": "Llaiquel", "rut": "", "companions": []}, {"n": 33, "nombre": "Diego Vicente Velozo Jeldres", "correo": "die.velozo@duocuc.cl", "seccion": "Diurno", "especialidad": "Por confirmar", "apellido": "Velozo", "rut": "", "companions": []}, {"n": 34, "nombre": "Dylan Jesus Navarrete Ulloa", "correo": "dyl.navarrete@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Navarrete", "rut": "", "companions": [{"id": "p34-0", "nombre": "Verónica del rosario lira castañeda", "rut": "22124472-9", "arrived": false, "arrivedAt": null}, {"id": "p34-1", "nombre": "Milenka carina", "rut": "16488303-5", "arrived": false, "arrivedAt": null}]}, {"n": 35, "nombre": "Elias Alfonso Collao Briones", "correo": "el.collao@duocuc.cl", "seccion": "Diurno", "especialidad": "NO APLICA", "apellido": "Collao", "rut": "", "companions": []}, {"n": 36, "nombre": "Elias Giovanni Martinez Brizuela", "correo": "el.martinezb@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Martinez", "rut": "", "companions": []}, {"n": 37, "nombre": "Emily Antonia Pacheco Quintana", "correo": "em.pachecoq@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Pacheco", "rut": "", "companions": [{"id": "p37-0", "nombre": "Pamela Quintana Herrera", "rut": "13.996.778-k", "arrived": false, "arrivedAt": null}, {"id": "p37-1", "nombre": "Agustin Nocetti Quintana", "rut": "25.932.948-5", "arrived": false, "arrivedAt": null}]}, {"n": 38, "nombre": "Esteban Nicolas Cañete Contreras", "correo": "est.canete@duocuc.cl", "seccion": "Diurno", "especialidad": "Por confirmar", "apellido": "Cañete", "rut": "", "companions": []}, {"n": 39, "nombre": "Facundo Silvestre Benitez Orellana", "correo": "fac.benitez@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Benitez", "rut": "", "companions": []}, {"n": 40, "nombre": "Fanoishka Laurent", "correo": "fa.laurent@duocuc.cl", "seccion": "Diurno", "especialidad": "Por confirmar", "apellido": "Fanoishka", "rut": "", "companions": []}, {"n": 41, "nombre": "Felipe Andres Vargas Ibarra", "correo": "fe.vargasi@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Vargas", "rut": "", "companions": [{"id": "p41-0", "nombre": "Teresa De Las Mercedes Ibarra Gonzales", "rut": "9.562.114-7", "arrived": false, "arrivedAt": null}]}, {"n": 42, "nombre": "Gabriel Andreas Sepulveda Peralta", "correo": "gab.sepulvedap@duocuc.cl", "seccion": "Diurno", "especialidad": "Por confirmar", "apellido": "Sepulveda", "rut": "", "companions": []}, {"n": 43, "nombre": "Gabriel Vergara Flos", "correo": "ga.vergaraf@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Vergara", "rut": "", "companions": [{"id": "p43-0", "nombre": "Luis Hernaldo Vergara Cornejo", "rut": "15.087.127-1", "arrived": false, "arrivedAt": null}, {"id": "p43-1", "nombre": "Karla Andrea Flos Treimún", "rut": "16.312.507-2", "arrived": false, "arrivedAt": null}]}, {"n": 94, "nombre": "Galadier Anastacia Inostroza Carrasco", "correo": "gal.inostroza@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Inostroza", "rut": "", "companions": [{"id": "p94-0", "nombre": "Roberto Abed Inostroza Castro", "rut": "14.209.318-9", "arrived": false, "arrivedAt": null}, {"id": "p94-1", "nombre": "Jocelyn Tamara Carrasco Lobos", "rut": "15.603.385-5", "arrived": false, "arrivedAt": null}]}, {"n": 44, "nombre": "Gaspar Nicolas Anavalon Martinez", "correo": "ga.anavalon@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Anavalon", "rut": "", "companions": [{"id": "p44-0", "nombre": "Evelyn Patricia Martínez Contreras", "rut": "13.540.359-8", "arrived": false, "arrivedAt": null}, {"id": "p44-1", "nombre": "Jorge Esteban Anavalon Gomez", "rut": "12.602.261-1", "arrived": false, "arrivedAt": null}]}, {"n": 45, "nombre": "Gerald Enrique Vera Oliva", "correo": "ge.verao@duocuc.cl", "seccion": "Diurno", "especialidad": "NO APLICA", "apellido": "Vera", "rut": "", "companions": []}, {"n": 95, "nombre": "Gonzalo Alejandro Novoa Valdivia", "correo": "go.novoa@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Novoa", "rut": "", "companions": []}, {"n": 96, "nombre": "Guido Ismael Castro Lopez", "correo": "gu.castrolopez@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Castro", "rut": "", "companions": []}, {"n": 46, "nombre": "Gustavo Ernesto Jose Gardilcic Carreño", "correo": "gu.gardilcic@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Gardilcic", "rut": "", "companions": []}, {"n": 47, "nombre": "Gustavo Eugenio Rivas Rodriguez", "correo": "gu.rivasr@duocuc.cl", "seccion": "Diurno", "especialidad": "Por confirmar", "apellido": "Rivas", "rut": "", "companions": [{"id": "p47-0", "nombre": "Paola Rodríguez lopez", "rut": "20.476.859-5", "arrived": false, "arrivedAt": null}, {"id": "p47-1", "nombre": "Sebastián andrhe escobar", "rut": "19.329.464-2", "arrived": false, "arrivedAt": null}]}, {"n": 97, "nombre": "Hector Eduardo Contreras Fuentes", "correo": "hect.contreras@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Contreras", "rut": "", "companions": [{"id": "p97-0", "nombre": "Marisol mercedes palma valencia", "rut": "12.850.884-8", "arrived": false, "arrivedAt": null}, {"id": "p97-1", "nombre": "Aylin belen peregrin davalos", "rut": "25.470.779-1", "arrived": false, "arrivedAt": null}]}, {"n": 108, "nombre": "Ian Bruno Reyes Collao", "correo": "ia.reyes@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Reyes", "rut": "", "companions": [{"id": "p108-0", "nombre": "Bruno Hernán Reyes Pizarro", "rut": "9.260.844-1", "arrived": false, "arrivedAt": null}, {"id": "p108-1", "nombre": "Helen Paulette Aramburu Arriagada", "rut": "20.207.396-4", "arrived": false, "arrivedAt": null}]}, {"n": 48, "nombre": "Ignacio Antonio Castro Marin", "correo": "iga.castro@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Castro", "rut": "", "companions": [{"id": "p48-0", "nombre": "Paris Denis Muñoz Soto", "rut": "22.250.882-7", "arrived": false, "arrivedAt": null}, {"id": "p48-1", "nombre": "Rodrigo Antonio Castro Lizana", "rut": "14.394.865-K", "arrived": false, "arrivedAt": null}]}, {"n": 49, "nombre": "Ignacio Octavio Paredes Ravest", "correo": "ig.paredesr@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Paredes", "rut": "", "companions": []}, {"n": 50, "nombre": "Ignacio Rodrigo Ulloa Sanchez", "correo": "ig.ulloas@duocuc.cl", "seccion": "Diurno", "especialidad": "Por confirmar", "apellido": "Ulloa", "rut": "", "companions": []}, {"n": 98, "nombre": "Isaac Exequiel Roman Salazar", "correo": "is.roman@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Roman", "rut": "", "companions": [{"id": "p98-0", "nombre": "Jose Cuadra Leyton", "rut": "8.018.756-4", "arrived": false, "arrivedAt": null}]}, {"n": 109, "nombre": "Isabel Veronica Calles Rojas", "correo": "is.calles@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Calles", "rut": "", "companions": [{"id": "p109-0", "nombre": "Maribel Rojas", "rut": "28.029.055-6", "arrived": false, "arrivedAt": null}, {"id": "p109-1", "nombre": "Herimar Rojas", "rut": "25.983.216-0", "arrived": false, "arrivedAt": null}]}, {"n": 51, "nombre": "Javier Ignacio Guzman Muñoz", "correo": "javi.guzmanm@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Guzman", "rut": "", "companions": [{"id": "p51-0", "nombre": "Paula Andrea Aguirre Calisto", "rut": "15.071.881-3", "arrived": false, "arrivedAt": null}]}, {"n": 52, "nombre": "Jhon Benjamin Olivares Iturrieta", "correo": "jh.olivaresi@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Olivares", "rut": "", "companions": []}, {"n": 53, "nombre": "Joan Miquel Lara Basaez", "correo": "jo.larab@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Lara", "rut": "", "companions": [{"id": "p53-0", "nombre": "Lorena Xiomara Basaez Lopez", "rut": "15.073.078-3", "arrived": false, "arrivedAt": null}]}, {"n": 110, "nombre": "Joaquin Eduardo Ferrada Castillo", "correo": "joa.ferrada@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Ferrada", "rut": "", "companions": []}, {"n": 54, "nombre": "Joaquin Fernando Castro Chamorro", "correo": "joaq.castroc@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Castro", "rut": "", "companions": [{"id": "p54-0", "nombre": "Elizabeth Carolina Chamorro Navarro", "rut": "16233559-6", "arrived": false, "arrivedAt": null}, {"id": "p54-1", "nombre": "Carlos Rodolfo Castro Villaseca", "rut": "16300566-2", "arrived": false, "arrivedAt": null}]}, {"n": 55, "nombre": "Joaquin Ferrada Isla", "correo": "joaq.ferrada@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Ferrada", "rut": "", "companions": [{"id": "p55-0", "nombre": "Yasna Paola Isla Briceño", "rut": "12.818.196-2", "arrived": false, "arrivedAt": null}]}, {"n": 56, "nombre": "Jorge Enrique Gonzalez Villarroel", "correo": "jorge.gonzalez@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Gonzalez", "rut": "", "companions": [{"id": "p56-0", "nombre": "Enrique humberto González olivares", "rut": "1263506-3", "arrived": false, "arrivedAt": null}, {"id": "p56-1", "nombre": "Paola Alejandra Villarroel molina", "rut": "13366833-0", "arrived": false, "arrivedAt": null}]}, {"n": 99, "nombre": "Juan Andres Galea Manriquez", "correo": "ju.galea@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Galea", "rut": "", "companions": []}, {"n": 57, "nombre": "Juan David Enrique Cordova Gonzalez", "correo": "ju.cordovag@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Cordova", "rut": "", "companions": [{"id": "p57-0", "nombre": "Juan Enrique Cordova Fuentes", "rut": "13.879.463-6", "arrived": false, "arrivedAt": null}, {"id": "p57-1", "nombre": "Karen Andrea González Ortega", "rut": "15.556.748-1", "arrived": false, "arrivedAt": null}]}, {"n": 58, "nombre": "Kevin Alberto Aleksander Reyes Gonzalez", "correo": "kevi.reyesg@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Reyes", "rut": "", "companions": [{"id": "p58-0", "nombre": "Ana Ivonne González Álvarez", "rut": "9.551.921-0", "arrived": false, "arrivedAt": null}, {"id": "p58-1", "nombre": "Ricardo Alejo Reyes Peralta", "rut": "7.243.186-3", "arrived": false, "arrivedAt": null}]}, {"n": 59, "nombre": "Kevin Braulio Abarca Roldan", "correo": "kevi.abarca@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Abarca", "rut": "", "companions": []}, {"n": 100, "nombre": "Lizandro Andres Godoy Torres", "correo": "liz.godoy@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Godoy", "rut": "", "companions": []}, {"n": 60, "nombre": "Lucas Gabriel Borquez Gomez", "correo": "luc.borquez@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Borquez", "rut": "", "companions": [{"id": "p60-0", "nombre": "Susana del Carmen Gómez Leiva", "rut": "11.829.976-0", "arrived": false, "arrivedAt": null}, {"id": "p60-1", "nombre": "Javier Eduardo Bórquez Aros", "rut": "11.704.157-3", "arrived": false, "arrivedAt": null}]}, {"n": 101, "nombre": "Luciano Javier Castro Toro", "correo": "lu.castrot@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Castro", "rut": "", "companions": []}, {"n": 61, "nombre": "Luciano Victor Campos Olmos", "correo": "luc.camposo@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Campos", "rut": "", "companions": []}, {"n": 62, "nombre": "Luis Felipe Ahumada Mardones", "correo": "lu.ahumadam@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Ahumada", "rut": "", "companions": [{"id": "p62-0", "nombre": "Janet Mardones Mardones", "rut": "13.452.547-9", "arrived": false, "arrivedAt": null}, {"id": "p62-1", "nombre": "Blas Enrique Ahumada Vega", "rut": "13.559.410-5", "arrived": false, "arrivedAt": null}]}, {"n": 63, "nombre": "Luis Felipe Torres Mendez", "correo": "luf.torres@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Torres", "rut": "", "companions": [{"id": "p63-0", "nombre": "Mattias Alexis Torres Méndez", "rut": "20.961.536-3", "arrived": false, "arrivedAt": null}]}, {"n": 64, "nombre": "Lukas Valdes Brito", "correo": "luk.valdes@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Valdes", "rut": "", "companions": [{"id": "p64-0", "nombre": "Marcela Ivonne Brito", "rut": "10.311.550-7", "arrived": false, "arrivedAt": null}, {"id": "p64-1", "nombre": "Anais Belén Cancino", "rut": "22.163.771-2", "arrived": false, "arrivedAt": null}]}, {"n": 65, "nombre": "Manuel Eduardo Cisterna Danton", "correo": "manu.cisterna@duocuc.cl", "seccion": "Diurno", "especialidad": "Por confirmar", "apellido": "Cisterna", "rut": "", "companions": [{"id": "p65-0", "nombre": "Francisco Javier Cisterna Vergara", "rut": "11.330.077-9", "arrived": false, "arrivedAt": null}]}, {"n": 111, "nombre": "Marcos Daniel Del Canto Vargas", "correo": "ma.delcanto@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Canto", "rut": "", "companions": [{"id": "p111-0", "nombre": "Cinthya del Canto Lopez", "rut": "11830049-1", "arrived": false, "arrivedAt": null}]}, {"n": 102, "nombre": "Mario Javier Andres Pino Labra", "correo": "mar.pinol@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Pino", "rut": "", "companions": []}, {"n": 66, "nombre": "Martin Emilio Naranjo Olivares", "correo": "ma.naranjoo@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Naranjo", "rut": "", "companions": [{"id": "p66-0", "nombre": "Graciela Ester Olivares Sobarzo", "rut": "13.766.234-5", "arrived": false, "arrivedAt": null}, {"id": "p66-1", "nombre": "Rafael Augusto García Olivares", "rut": "23.351.814-k", "arrived": false, "arrivedAt": null}]}, {"n": 67, "nombre": "Martin Esteban Vergara Arias", "correo": "mae.vergara@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Vergara", "rut": "", "companions": [{"id": "p67-0", "nombre": "Elizabeth Paulina Arias Febre", "rut": "16.887.292-5", "arrived": false, "arrivedAt": null}, {"id": "p67-1", "nombre": "David Andrés Candia Torres", "rut": "16.753.119-9", "arrived": false, "arrivedAt": null}]}, {"n": 68, "nombre": "Martin Nicolas Espinoza Espinoza", "correo": "mart.espinozae@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Espinoza", "rut": "", "companions": []}, {"n": 69, "nombre": "Maximiliano Alexander Aioria Veas Parra", "correo": "max.veas@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Veas", "rut": "", "companions": [{"id": "p69-0", "nombre": "Nataly Parra Bustamante", "rut": "16.105.980-3", "arrived": false, "arrivedAt": null}, {"id": "p69-1", "nombre": "Silvi Bustamante Pereira", "rut": "6.848.667-k", "arrived": false, "arrivedAt": null}, {"id": "p69-2", "nombre": "Josefa Belén Jiménez Ruay", "rut": "22852349-6", "arrived": false, "arrivedAt": null}]}, {"n": 112, "nombre": "Maximiliano Ariel Hernandez Gallardo", "correo": "max.hernandezg@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Hernandez", "rut": "", "companions": [{"id": "p112-0", "nombre": "Francesca Victoria Gallardo Almonacid", "rut": "13.998.644-K", "arrived": false, "arrivedAt": null}]}, {"n": 70, "nombre": "Maximiliano Isamit Jofre", "correo": "ma.isamit@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Isamit", "rut": "", "companions": []}, {"n": 71, "nombre": "Maximo Alejandro Lugo Jimenez", "correo": "max.lugo@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Lugo", "rut": "", "companions": [{"id": "p71-0", "nombre": "Michell Alejandro Lugo", "rut": "26290915-8", "arrived": false, "arrivedAt": null}, {"id": "p71-1", "nombre": "Betzaida Gabriela Jiménez Sosa", "rut": "26290830-5", "arrived": false, "arrivedAt": null}]}, {"n": 72, "nombre": "Miguel Angel Vega Pizarro", "correo": "mi.vegap@duocuc.cl", "seccion": "Diurno", "especialidad": "NO APLICA", "apellido": "Vega", "rut": "", "companions": []}, {"n": 73, "nombre": "Milan Alberto Gao Quintana Cabrera", "correo": "mil.quintana@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Quintana", "rut": "", "companions": [{"id": "p73-0", "nombre": "María Teresa Cabrera Blanco", "rut": "11.625.185-K", "arrived": false, "arrivedAt": null}, {"id": "p73-1", "nombre": "Jorge Luis Quintana Cubillos", "rut": "8.055.510-5", "arrived": false, "arrivedAt": null}]}, {"n": 74, "nombre": "Nicolas Alejandro Vargas Leon", "correo": "nic.vargasl@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Vargas", "rut": "", "companions": []}, {"n": 75, "nombre": "Nicolas Francisco Olmos Sepulveda", "correo": "n.olmos@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Olmos", "rut": "", "companions": [{"id": "p75-0", "nombre": "cristofer muñoz", "rut": "193263291", "arrived": false, "arrivedAt": null}, {"id": "p75-1", "nombre": "magda castro", "rut": "187032911", "arrived": false, "arrivedAt": null}]}, {"n": 76, "nombre": "Pablo Josue Eleazar Salas Aravena", "correo": "pab.salasa@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Salas", "rut": "", "companions": []}, {"n": 77, "nombre": "Pedro Andres Fuentes Sanchez", "correo": "ped.fuentess@duocuc.cl", "seccion": "Diurno", "especialidad": "NO APLICA", "apellido": "Fuentes", "rut": "", "companions": []}, {"n": 103, "nombre": "Poulette Celeste Alvarado Rojas", "correo": "po.alvarado@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Alvarado", "rut": "", "companions": []}, {"n": 104, "nombre": "Roberto Carlos Andre Eyzaguirre Vega", "correo": "ro.eyzaguirre@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Eyzaguirre", "rut": "", "companions": []}, {"n": 78, "nombre": "Sebastian Eduardo Cortes Guerra", "correo": "seb.cortesg@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Cortes", "rut": "", "companions": []}, {"n": 105, "nombre": "Sebastian Ignacio Pardo Iriarte", "correo": "se.pardoi@duocuc.cl", "seccion": "Vespertino", "especialidad": "Desarrollo de Software", "apellido": "Pardo", "rut": "", "companions": []}, {"n": 79, "nombre": "Sebastian Matias Cabrera Herrera", "correo": "se.cabrerah@duocuc.cl", "seccion": "Diurno", "especialidad": "NO APLICA", "apellido": "Cabrera", "rut": "", "companions": []}, {"n": 80, "nombre": "Simon Daniel Villarroel Poblete", "correo": "sim.villarroel@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Villarroel", "rut": "", "companions": [{"id": "p80-0", "nombre": "Jaime Andrés Rodríguez Riquelme", "rut": "13.766.806-8", "arrived": false, "arrivedAt": null}, {"id": "p80-1", "nombre": "Claudia Andrea Poblete Marín", "rut": "15.079.169-3", "arrived": false, "arrivedAt": null}]}, {"n": 81, "nombre": "Vicente Saul Pizarro Alvarez", "correo": "vi.pizarroa@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Pizarro", "rut": "", "companions": [{"id": "p81-0", "nombre": "Alex Pizarro Paez", "rut": "12.450.765-0", "arrived": false, "arrivedAt": null}, {"id": "p81-1", "nombre": "Giovanna Álvarez Becerra", "rut": "12.623.639-5", "arrived": false, "arrivedAt": null}]}, {"n": 82, "nombre": "Victor Manuel Guerra Chirinos", "correo": "vict.guerra@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Guerra", "rut": "", "companions": [{"id": "p82-0", "nombre": "Martha carolina guerra chirinos", "rut": "26071612-3", "arrived": false, "arrivedAt": null}]}, {"n": 106, "nombre": "Victoria Ortega Fuenzalida", "correo": "vi.ortegaf@duocuc.cl", "seccion": "Vespertino", "especialidad": "Inteligencia Artificial", "apellido": "Ortega", "rut": "", "companions": [{"id": "p106-0", "nombre": "David Ismael Ortega Canales", "rut": "10238740-5", "arrived": false, "arrivedAt": null}, {"id": "p106-1", "nombre": "Andrea Jaqueline Fuenzalida Valdebenito", "rut": "11193483-5", "arrived": false, "arrivedAt": null}]}, {"n": 83, "nombre": "Wladimir Francisco Fernandez Garay", "correo": "wlad.fernandez@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Fernandez", "rut": "", "companions": [{"id": "p83-0", "nombre": "Conztanza Olmedo Quiroga", "rut": "22393363-7", "arrived": false, "arrivedAt": null}, {"id": "p83-1", "nombre": "Marianela Garay Salinas", "rut": "12850942-9", "arrived": false, "arrivedAt": null}]}, {"n": 114, "nombre": "Sebastian Andres Cabrera Latorre", "correo": "se.cabreral@duocuc.cl", "seccion": "Diurno", "especialidad": "Inteligencia Artificial", "apellido": "Cabrera", "rut": "", "companions": []}, {"n": 84, "nombre": "Yasmine Seda Lodder Montero", "correo": "ya.lodder@duocuc.cl", "seccion": "Diurno", "especialidad": "Desarrollo de Software", "apellido": "Lodder", "rut": "", "companions": []}];
 
-  var toggleBtn = document.getElementById('toggleBtn');
-  var statusText = document.getElementById('statusText');
-  var unavailBox = document.getElementById('unavailBox');
-  var videoWrap = document.getElementById('videoWrap');
-  var resultBox = document.getElementById('resultBox');
-  var resultRut = document.getElementById('resultRut');
-  var copyBtn = document.getElementById('copyBtn');
-  var rescanBtn = document.getElementById('rescanBtn');
-  var copiedToast = document.getElementById('copiedToast');
+const rosterByN = {};
+ROSTER.forEach(s => rosterByN[s.n] = s);
 
-  function extractRutToken(rawText){
-    var stripped = String(rawText || '').replace(/[.\-\s@]/g, '');
-    var m = stripped.match(/\d{7,8}[0-9kK]/);
-    return m ? m[0].toUpperCase() : null;
+/* ============================================================
+   Utilidades
+   ============================================================ */
+function stripAccents(s){
+  return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function norm(s){ return stripAccents(s).toLowerCase().trim(); }
+function normRut(s){
+  return stripAccents(s).toUpperCase().replace(/[^0-9K]/g,'');
+}
+function isMostlyDigits(s){
+  const cleaned = s.replace(/[.\-\s]/g,'');
+  if(cleaned.length < 3) return false;
+  const digits = (cleaned.match(/[0-9]/g)||[]).length;
+  return digits / cleaned.length > 0.7;
+}
+function fmtTime(iso){
+  if(!iso) return '';
+  try{
+    const d = new Date(iso);
+    return d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return ''; }
+}
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+let toastTimer=null;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ============================================================
+   Estado local (espejo de la base compartida)
+   checkins: { [n]: { n, arrived, arrivedAt, rut, companions:[{id,nombre,rut,arrived,arrivedAt}] } }
+   ============================================================ */
+let checkins = {};
+let dbReady = false;
+const SHEETS_API_URL = 'PEGAR_URL_AQUI'; // <-- reemplazar con la URL /exec del Apps Script
+let pendingScanRut = null; // rut escaneado sin coincidencia todavía
+
+function getCheckin(n){
+  if(checkins[n]) return checkins[n];
+  // sin check-in guardado todavía: parte desde los datos precargados del
+  // Listado Maestro / hoja Invitados (RUT y acompañantes reales, si existen).
+  const s = rosterByN[n] || {};
+  return {
+    n,
+    arrived: false,
+    arrivedAt: null,
+    rut: s.rut || null,
+    companions: (s.companions || []).map(c => Object.assign({}, c))
+  };
+}
+
+function effectiveRut(n){
+  const c = checkins[n];
+  if(c && c.rut) return c.rut;
+  const s = rosterByN[n];
+  return (s && s.rut) || null;
+}
+
+async function saveCheckin(n, patch){
+  const cur = getCheckin(n);
+  const next = Object.assign({}, cur, patch, {n});
+  checkins[n] = next;
+  renderAll(); // optimista
+  if(!sheetsConfigured()){ toast('Sin conexión a la base compartida — el cambio solo quedó en este dispositivo'); return; }
+  try{
+    const s = rosterByN[n] || {};
+    const payload = {
+      n, nombre: s.nombre || '', especialidad: s.especialidad || '',
+      arrived: !!next.arrived, arrivedAt: next.arrivedAt || '',
+      rut: next.rut || '', companions: next.companions || []
+    };
+    const res = await fetch(SHEETS_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json().catch(()=>null);
+    if(!json || !json.ok) throw new Error('write failed');
+  }catch(e){
+    toast('No se pudo guardar. Revisa la conexión e inténtalo otra vez.');
+  }
+}
+
+function learnedRutMatch(query){
+  const q = normRut(query);
+  if(!q) return null;
+  for(const s of ROSTER){
+    const r = effectiveRut(s.n);
+    if(r && normRut(r) === q) return s.n;
+  }
+  return null;
+}
+
+/* ============================================================
+   Inicializar base compartida (capability db)
+   ============================================================ */
+function sheetsConfigured(){
+  return !!SHEETS_API_URL && SHEETS_API_URL.indexOf('PEGAR_URL_AQUI') === -1;
+}
+
+let pollTimer = null;
+
+async function pollCheckins(){
+  const dot = document.getElementById('connDot');
+  const label = document.getElementById('connLabel');
+  try{
+    const res = await fetch(SHEETS_API_URL + (SHEETS_API_URL.includes('?') ? '&' : '?') + 't=' + Date.now());
+    const json = await res.json();
+    if(!json || json.ok !== true) throw new Error('bad response');
+    checkins = json.checkins || {};
+    dbReady = true;
+    dot.className = 'conn-dot ok';
+    label.textContent = 'sincronizado';
+    renderAll();
+  }catch(e){
+    dot.className = 'conn-dot bad';
+    label.textContent = 'error de conexión';
+  }
+}
+
+async function initDb(){
+  const dot = document.getElementById('connDot');
+  const label = document.getElementById('connLabel');
+
+  if(!sheetsConfigured()){
+    dot.className = 'conn-dot bad';
+    label.textContent = 'sin sincronización';
+    dbReady = true;
+    renderAll();
+    return;
   }
 
-  function scanAvailable(){
-    return !!(window.ZXing && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  await pollCheckins();
+  clearInterval(pollTimer);
+  pollTimer = setInterval(pollCheckins, 3000);
+}
+
+/* ============================================================
+   Navegación: vistas y sub-tabs
+   ============================================================ */
+let currentView = 'acreditacion';
+let currentSub = 'buscar';
+let openStudent = null; // n del alumno con el panel abierto
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    currentView = t.dataset.view;
+    document.getElementById('view-acreditacion').style.display = currentView==='acreditacion' ? '' : 'none';
+    document.getElementById('view-locutor').style.display = currentView==='locutor' ? '' : 'none';
+    if(currentView !== 'acreditacion') stopScanning();
+    renderAll();
+  });
+});
+
+document.querySelectorAll('.subtab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    currentSub = t.dataset.sub;
+    document.getElementById('sub-buscar').style.display = currentSub==='buscar' ? '' : 'none';
+    document.getElementById('sub-escanear').style.display = currentSub==='escanear' ? '' : 'none';
+    if(currentSub !== 'escanear') stopScanning();
+  });
+});
+
+/* ============================================================
+   Búsqueda manual
+   ============================================================ */
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', renderResults);
+document.getElementById('clearSearch').addEventListener('click', () => {
+  searchInput.value=''; renderResults(); searchInput.focus();
+});
+
+function matchStudents(query){
+  const q = query.trim();
+  if(!q) return ROSTER.slice(0,8).map(s=>s.n); // sugerencia inicial corta
+  if(isMostlyDigits(q)){
+    const byRut = learnedRutMatch(q);
+    if(byRut) return [byRut];
   }
+  const nq = norm(q);
+  return ROSTER.filter(s => norm(s.nombre).includes(nq) || norm(s.apellido).includes(nq))
+    .map(s=>s.n).slice(0,25);
+}
 
-  function resetUI(){
-    resultBox.style.display = 'none';
-    unavailBox.style.display = 'none';
-    copiedToast.textContent = '';
+function renderResults(){
+  const list = document.getElementById('resultList');
+  const ns = matchStudents(searchInput.value);
+  if(ns.length===0){
+    list.innerHTML = '<div class="empty-hint">No se encontró ningún alumno con ese nombre o RUT.<br>Revisa la ortografía o busca por apellido.</div>';
+    return;
   }
-
-  async function startScanning(){
-    resetUI();
-
-    if (!scanAvailable()){
-      unavailBox.textContent = 'El escaneo no está disponible en este navegador. Prueba con Chrome o Safari actualizados.';
-      unavailBox.style.display = '';
-      return;
+  list.innerHTML = ns.map(n => rowHtml(n)).join('');
+  list.querySelectorAll('.result-row').forEach(el => {
+    el.addEventListener('click', () => {
+      const n = Number(el.dataset.n);
+      openStudent = (openStudent === n) ? null : n;
+      renderResults();
+    });
+  });
+  if(openStudent && ns.includes(openStudent)){
+    const holder = list.querySelector(`[data-n="${openStudent}"]`);
+    if(holder){
+      const det = document.createElement('div');
+      det.innerHTML = detailHtml(openStudent);
+      holder.after(det.firstElementChild);
+      wireDetail(openStudent);
     }
+  }
+}
 
-    try {
-      var constraints = { video: { facingMode: { ideal: 'environment' } } };
+function rowHtml(n){
+  const s = rosterByN[n];
+  const c = getCheckin(n);
+  const open = openStudent === n;
+  return `<div class="result-row ${open?'open':''}" data-n="${n}">
+    <div class="result-top">
+      <div>
+        <div class="result-name">${esc(s.nombre)}</div>
+        <div class="result-sub">${esc(s.seccion||'—')} · ${esc(s.especialidad)}</div>
+      </div>
+      <span class="badge ${c.arrived?'presente':'pendiente'}">${c.arrived ? '✓ '+fmtTime(c.arrivedAt) : 'Pendiente'}</span>
+    </div>
+  </div>`;
+}
 
-      // Pide el permiso de cámara de inmediato, lo más cerca posible del toque
-      // del botón (mejora compatibilidad con Safari/iOS).
-      var preflight = await navigator.mediaDevices.getUserMedia(constraints);
-      preflight.getTracks().forEach(function(t){ t.stop(); });
+function detailHtml(n){
+  const s = rosterByN[n];
+  const c = getCheckin(n);
+  const companionsHtml = (c.companions||[]).map(comp => companionRowHtml(n, comp)).join('');
+  return `<div class="detail" data-detail-n="${n}">
+    <div class="detail-head">
+      <div>
+        <div class="detail-name">${esc(s.nombre)}</div>
+        <div class="detail-meta">${esc(s.seccion||'—')} · ${esc(s.especialidad)}${s.correo? ' · '+esc(s.correo):''}</div>
+      </div>
+      <button class="close-x" data-close>✕</button>
+    </div>
 
-      var hints = new Map();
-      var formats = [
-        ZXing.BarcodeFormat.PDF_417, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
-        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.QR_CODE,
-        ZXing.BarcodeFormat.DATA_MATRIX
-      ];
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-      codeReader = new ZXing.BrowserMultiFormatReader(hints);
+    <button class="confirm-btn ${c.arrived?'on':'off'}" data-confirm>
+      ${c.arrived ? '✓ Llegada confirmada · '+fmtTime(c.arrivedAt) : 'Confirmar llegada'}
+    </button>
 
-      videoWrap.style.display = '';
-      statusText.textContent = 'Apunta la cámara al código de barras…';
-      toggleBtn.textContent = 'Detener escaneo';
-      toggleBtn.classList.add('stop');
-      scanning = true;
+    <div class="field-row">
+      <label>RUT</label>
+      <input type="text" data-rut value="${esc(c.rut||'')}" placeholder="Sin registrar todavía">
+    </div>
 
-      var started = false;
-      if (typeof codeReader.decodeFromConstraints === 'function'){
-        try {
-          await codeReader.decodeFromConstraints(constraints, 'scanVideo', onScanResult);
-          started = true;
-        } catch(e){ started = false; }
-      }
-      if (!started){
-        await codeReader.decodeFromVideoDevice(undefined, 'scanVideo', onScanResult);
-      }
-    } catch(e){
-      statusText.textContent = '';
-      var detail = (e && (e.name || e.message)) ? (e.name || '') + (e.message ? ': ' + e.message : '') : 'error desconocido';
-      unavailBox.textContent = 'No se pudo activar la cámara (' + detail + '). Revisa que hayas aceptado el permiso de cámara para este sitio.';
-      unavailBox.style.display = '';
-      videoWrap.style.display = 'none';
-      scanning = false;
-      toggleBtn.textContent = 'Iniciar escaneo';
-      toggleBtn.classList.remove('stop');
+    <div class="section-label">Acompañantes</div>
+    <div data-companion-list>${companionsHtml || '<div class="faint" style="font-size:12.5px; margin-bottom:6px;">Sin acompañantes registrados.</div>'}</div>
+    <button class="add-companion" data-add-companion>+ Agregar acompañante</button>
+  </div>`;
+}
+
+function companionRowHtml(n, comp){
+  return `<div class="companion-row" data-companion-id="${comp.id}">
+    <input type="text" class="cn" data-comp-nombre value="${esc(comp.nombre||'')}" placeholder="Nombre del acompañante">
+    <input type="text" class="cr" data-comp-rut value="${esc(comp.rut||'')}" placeholder="RUT">
+    <div class="chk ${comp.arrived?'on':''}" data-comp-check title="Marcar llegada">${comp.arrived?'✓':''}</div>
+    <button class="rm-btn" data-comp-remove title="Quitar">✕</button>
+  </div>`;
+}
+
+function wireDetail(n){
+  const det = document.querySelector(`[data-detail-n="${n}"]`);
+  if(!det) return;
+
+  det.querySelector('[data-close]').addEventListener('click', () => {
+    openStudent = null; renderResults();
+  });
+
+  det.querySelector('[data-confirm]').addEventListener('click', () => {
+    const c = getCheckin(n);
+    saveCheckin(n, { arrived: !c.arrived, arrivedAt: !c.arrived ? new Date().toISOString() : c.arrivedAt });
+  });
+
+  const rutInput = det.querySelector('[data-rut]');
+  rutInput.addEventListener('change', () => {
+    saveCheckin(n, { rut: rutInput.value.trim() });
+  });
+
+  det.querySelector('[data-add-companion]').addEventListener('click', () => {
+    const c = getCheckin(n);
+    const companions = (c.companions||[]).concat([{id:uid(), nombre:'', rut:'', arrived:false, arrivedAt:null}]);
+    saveCheckin(n, { companions });
+  });
+
+  det.querySelectorAll('[data-companion-id]').forEach(row => {
+    const cid = row.dataset.companionId;
+    function updateCompanion(patch){
+      const c = getCheckin(n);
+      const companions = (c.companions||[]).map(cp => cp.id===cid ? Object.assign({}, cp, patch) : cp);
+      saveCheckin(n, { companions });
     }
+    row.querySelector('[data-comp-nombre]').addEventListener('change', e => updateCompanion({nombre:e.target.value}));
+    row.querySelector('[data-comp-rut]').addEventListener('change', e => updateCompanion({rut:e.target.value}));
+    row.querySelector('[data-comp-check]').addEventListener('click', () => {
+      const c = getCheckin(n);
+      const cur = (c.companions||[]).find(cp=>cp.id===cid);
+      const arrived = !(cur && cur.arrived);
+      updateCompanion({ arrived, arrivedAt: arrived ? new Date().toISOString() : null });
+    });
+    row.querySelector('[data-comp-remove]').addEventListener('click', () => {
+      const c = getCheckin(n);
+      const companions = (c.companions||[]).filter(cp=>cp.id!==cid);
+      saveCheckin(n, { companions });
+    });
+  });
+}
+
+/* ============================================================
+   Escaneo de código de barras (ZXing) — experimental
+   ============================================================ */
+let codeReader = null;
+let scanning = false;
+
+function extractRutToken(rawText){
+  // Quita separadores típicos y busca un bloque de 7-9 dígitos + dígito verificador
+  const stripped = rawText.replace(/[.\-\s@]/g,'');
+  const m = stripped.match(/\d{7,8}[0-9kK]/);
+  return m ? m[0].toUpperCase() : null;
+}
+
+function scanAvailable(){
+  return !!(window.ZXing && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+
+document.getElementById('scanToggleBtn').addEventListener('click', () => {
+  if(scanning) stopScanning(); else startScanning();
+});
+
+async function startScanning(){
+  const statusEl = document.getElementById('scanStatus');
+  const videoWrap = document.getElementById('videoWrap');
+  const unavailEl = document.getElementById('scanUnavailable');
+  const btn = document.getElementById('scanToggleBtn');
+
+  if(!scanAvailable()){
+    unavailEl.textContent = 'El escaneo no está disponible en este dispositivo o navegador. Usa la pestaña Buscar para acreditar por nombre o RUT.';
+    unavailEl.style.display = '';
+    return;
   }
 
-  function stopScanning(){
-    if (codeReader){
-      try { codeReader.reset(); } catch(e){}
+  try{
+    // Pide el permiso de cámara de inmediato, lo más cerca posible del toque
+    // del botón — algunos navegadores (sobre todo Safari/iOS) rechazan el
+    // permiso si la solicitud llega después de otros pasos async.
+    const constraints = { video: { facingMode: { ideal: 'environment' } } };
+    const preflight = await navigator.mediaDevices.getUserMedia(constraints);
+    preflight.getTracks().forEach(t => t.stop());
+
+    const hints = new Map();
+    const formats = [
+      ZXing.BarcodeFormat.PDF_417, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
+      ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.QR_CODE,
+      ZXing.BarcodeFormat.DATA_MATRIX
+    ];
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    codeReader = new ZXing.BrowserMultiFormatReader(hints);
+
+    videoWrap.style.display = '';
+    unavailEl.style.display = 'none';
+    statusEl.textContent = 'Apunta la cámara al código de barras…';
+    btn.textContent = 'Detener escaneo';
+    btn.classList.add('stop');
+    scanning = true;
+
+    let started = false;
+    if(typeof codeReader.decodeFromConstraints === 'function'){
+      try{
+        await codeReader.decodeFromConstraints(constraints, 'scanVideo', onScanResult);
+        started = true;
+      }catch(e){ started = false; }
     }
-    scanning = false;
+    if(!started){
+      await codeReader.decodeFromVideoDevice(undefined, 'scanVideo', onScanResult);
+    }
+  }catch(e){
+    statusEl.textContent = '';
+    const detail = (e && (e.name || e.message)) ? (e.name || '') + (e.message ? ': ' + e.message : '') : 'error desconocido';
+    unavailEl.textContent = 'No se pudo activar la cámara (' + detail + '). Si tu navegador pidió permiso de cámara, revisa que lo hayas aceptado. Mientras tanto, usa la pestaña Buscar para acreditar por nombre o RUT.';
+    unavailEl.style.display = '';
     videoWrap.style.display = 'none';
-    statusText.textContent = '';
-    toggleBtn.textContent = 'Iniciar escaneo';
-    toggleBtn.classList.remove('stop');
+    scanning = false;
+    btn.textContent = 'Iniciar escaneo';
+    btn.classList.remove('stop');
   }
+}
 
-  function onScanResult(result, err){
-    if (!result) return;
-    var text = result.getText ? result.getText() : String(result);
-    var rut = extractRutToken(text);
-    if (!rut) return; // sigue escaneando si no encontró un RUT plausible
+function onScanResult(result, err){
+  if(result){
+    const raw = result.getText();
+    const rut = extractRutToken(raw);
+    handleScannedRut(rut, raw);
+  }
+  // los errores "NotFound"/checksum durante el escaneo continuo son normales: se ignoran.
+}
 
+function handleScannedRut(rut, raw){
+  const statusEl = document.getElementById('scanStatus');
+  if(!rut){
+    statusEl.textContent = 'Código leído pero no se detectó un RUT — probando de nuevo…';
+    return;
+  }
+  statusEl.textContent = 'RUT detectado: ' + rut;
+
+  if(openStudent){
+    // ya hay un alumno abierto: asigna el RUT directamente
+    const det = document.querySelector(`[data-detail-n="${openStudent}"] [data-rut]`);
+    if(det){ det.value = rut; }
+    saveCheckin(openStudent, { rut });
+    toast('RUT asignado a '+rosterByN[openStudent].nombre);
     stopScanning();
-    resultRut.textContent = rut;
-    resultBox.style.display = '';
-    statusText.textContent = '';
+    switchToBuscar();
+    return;
   }
 
-  toggleBtn.addEventListener('click', function(){
-    if (scanning) stopScanning(); else startScanning();
-  });
+  const matchN = learnedRutMatch(rut);
+  if(matchN){
+    openStudent = matchN;
+    stopScanning();
+    switchToBuscar();
+    searchInput.value = '';
+    renderResults();
+    toast('Encontrado: '+rosterByN[matchN].nombre);
+  } else {
+    pendingScanRut = rut;
+    stopScanning();
+    switchToBuscar();
+    showScanPendingBanner();
+  }
+}
 
-  rescanBtn.addEventListener('click', function(){
-    resetUI();
-    startScanning();
-  });
+function switchToBuscar(){
+  document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));
+  document.querySelector('[data-sub="buscar"]').classList.add('active');
+  currentSub = 'buscar';
+  document.getElementById('sub-buscar').style.display = '';
+  document.getElementById('sub-escanear').style.display = 'none';
+}
 
-  copyBtn.addEventListener('click', async function(){
-    var text = resultRut.textContent;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText){
-        await navigator.clipboard.writeText(text);
-      } else {
-        var ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
-      copiedToast.textContent = 'Copiado — pégalo en la pestaña Buscar.';
-    } catch(e){
-      copiedToast.textContent = 'No se pudo copiar automáticamente. Selecciona el RUT manualmente.';
-    }
+function showScanPendingBanner(){
+  const b = document.getElementById('scanPendingBanner');
+  b.style.display = '';
+  b.textContent = 'RUT escaneado (' + pendingScanRut + ') sin coincidencia todavía. Busca al alumno por nombre y ábrelo para asociarlo.';
+}
+
+function stopScanning(){
+  if(codeReader){
+    try{ codeReader.reset(); }catch(e){}
+  }
+  scanning = false;
+  const btn = document.getElementById('scanToggleBtn');
+  btn.textContent = 'Iniciar escaneo';
+  btn.classList.remove('stop');
+  document.getElementById('videoWrap').style.display = 'none';
+  document.getElementById('scanStatus').textContent = '';
+}
+
+/* aplica un RUT pendiente cuando se abre a un alumno desde Buscar */
+const _origMatch = matchStudents;
+
+/* ============================================================
+   Vista Locutor
+   ============================================================ */
+let groupSize = 10;
+let orderMode = 'apellido';
+let calledGroups = {}; // local, no sincronizado
+
+document.getElementById('grpMinus').addEventListener('click', () => { groupSize = Math.max(1, groupSize-1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
+document.getElementById('grpPlus').addEventListener('click', () => { groupSize = Math.min(30, groupSize+1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
+document.getElementById('orderSelect').addEventListener('change', e => { orderMode = e.target.value; renderLocutor(); });
+
+function arrivedList(){
+  return Object.values(checkins)
+    .filter(c => c.arrived && rosterByN[c.n])
+    .map(c => Object.assign({}, rosterByN[c.n], {arrivedAt:c.arrivedAt}));
+}
+
+function computeGroups(){
+  const list = arrivedList();
+  if(orderMode === 'apellido'){
+    list.sort((a,b) => a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es'));
+    const groups = [];
+    for(let i=0;i<list.length;i+=groupSize) groups.push({esp:null, items:list.slice(i,i+groupSize)});
+    return groups;
+  }
+  list.sort((a,b) => a.especialidad.localeCompare(b.especialidad,'es') || a.apellido.localeCompare(b.apellido,'es'));
+  const groups = [];
+  let current = []; let curEsp = null;
+  list.forEach(item => {
+    if(item.especialidad !== curEsp && current.length>0){ groups.push({esp:curEsp, items:current}); current=[]; }
+    curEsp = item.especialidad;
+    current.push(item);
+    if(current.length===groupSize){ groups.push({esp:curEsp, items:current}); current=[]; }
   });
+  if(current.length) groups.push({esp:curEsp, items:current});
+  return groups;
+}
+
+function renderLocutor(){
+  const groups = computeGroups();
+  const grid = document.getElementById('groupsGrid');
+  const empty = document.getElementById('locutorEmpty');
+  const presentes = arrivedList().length;
+
+  document.getElementById('locPresentes').textContent = presentes;
+  document.getElementById('locTotal').textContent = ROSTER.length;
+  document.getElementById('progressFill').style.width = (ROSTER.length ? (presentes/ROSTER.length*100) : 0) + '%';
+
+  if(groups.length===0){
+    grid.innerHTML=''; empty.style.display=''; return;
+  }
+  empty.style.display='none';
+
+  grid.innerHTML = groups.map((g,gi) => {
+    const gkey = orderMode+'-'+gi+'-'+groupSize;
+    const done = !!calledGroups[gkey];
+    const espLabel = g.esp ? `<div class="group-esp">${esc(g.esp)}</div>` : '';
+    const names = g.items.map((it,idx) => {
+      const called = calledGroups[gkey+'-'+it.n];
+      return `<div class="name-item ${called?'called':''}" data-name-n="${it.n}" data-gkey="${gkey}">
+        <span class="idx mono">${idx+1}</span>
+        <span><span class="apn">${esc(it.apellido)}</span> ${esc(it.nombre.replace(it.apellido,'').trim())}</span>
+      </div>`;
+    }).join('');
+    return `<div class="group-card ${done?'done':''}">
+      <div class="group-head">
+        <span class="group-title">Grupo ${gi+1}</span>
+        <span class="group-count">${g.items.length}/${groupSize}</span>
+      </div>
+      ${espLabel}
+      ${names}
+      <button class="group-mark" data-mark-group="${gkey}">${done?'↺ Reactivar grupo':'✓ Marcar grupo como llamado'}</button>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('[data-name-n]').forEach(el => {
+    el.addEventListener('click', () => {
+      const key = el.dataset.gkey+'-'+el.dataset.nameN;
+      calledGroups[key] = !calledGroups[key];
+      renderLocutor();
+    });
+  });
+  grid.querySelectorAll('[data-mark-group]').forEach(el => {
+    el.addEventListener('click', () => {
+      const gkey = el.dataset.markGroup;
+      const nowDone = !calledGroups[gkey];
+      calledGroups[gkey] = nowDone;
+      const g = groups.find((gg,i)=> (orderMode+'-'+i+'-'+groupSize)===gkey);
+      if(g) g.items.forEach(it => calledGroups[gkey+'-'+it.n] = nowDone);
+      renderLocutor();
+    });
+  });
+}
+
+/* ============================================================
+   Export CSV
+   ============================================================ */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const rows = [['N°','Nombre','Sección','Especialidad','RUT','Llegó','Hora llegada','Acompañantes llegados','Detalle acompañantes']];
+  ROSTER.forEach(s => {
+    const c = getCheckin(s.n);
+    const comps = (c.companions||[]);
+    const compsLlegados = comps.filter(cp=>cp.arrived).length;
+    const compsDetalle = comps.map(cp => `${cp.nombre||'(sin nombre)'} ${cp.rut||''} [${cp.arrived?'llegó '+fmtTime(cp.arrivedAt):'pendiente'}]`).join(' | ');
+    rows.push([s.n, s.nombre, s.seccion, s.especialidad, c.rut||'', c.arrived?'Sí':'No', fmtTime(c.arrivedAt), compsLlegados, compsDetalle]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const filename = 'acreditacion_investidura_'+new Date().toISOString().slice(0,10)+'.csv';
+  try{
+    const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    toast('Registro exportado');
+  }catch(e){
+    toast('No se pudo exportar el archivo.');
+  }
+});
+
+/* ============================================================
+   Render general + contadores
+   ============================================================ */
+function renderAll(){
+  const presentes = Object.values(checkins).filter(c=>c.arrived).length;
+  const acomp = Object.values(checkins).reduce((sum,c) => sum + (c.companions||[]).filter(cp=>cp.arrived).length, 0);
+  document.getElementById('statPresentes').textContent = presentes;
+  document.getElementById('statTotal').textContent = ROSTER.length;
+  document.getElementById('statAcomp').textContent = acomp;
+
+  if(currentView === 'acreditacion'){
+    renderResults();
+  } else {
+    renderLocutor();
+  }
+}
+
+initDb();
+renderAll();
 
 })();
 </script>
+
 </body>
 </html>
