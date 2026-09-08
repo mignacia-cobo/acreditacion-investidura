@@ -283,6 +283,8 @@
     margin-top:14px; padding:12px 14px; border-radius:10px; background:var(--warn-wash); color:var(--warn);
     font-size:13.5px; text-align:left;
   }
+  .scan-banner.danger{ background:var(--danger-wash); color:var(--danger); }
+  .scan-banner.success{ background:var(--success-wash); color:var(--success); }
   .scan-unavailable{
     padding:26px 18px; text-align:center; color:var(--ink-soft); font-size:13.5px;
   }
@@ -564,6 +566,7 @@ let checkins = {};
 let dbReady = false;
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwmmuiFL0F-s2KmSFs3gBRGHUjdZhLgzKbTgN2aokJEvlcBgyZP8fQdudVw6KjmN3UdwQ/exec';
 let pendingScanRut = null; // rut escaneado sin coincidencia todavía
+let pendingScanNameGuess = null; // mejor intento de nombre extraído del texto crudo del código, si lo hay
 
 function getCheckin(n){
   if(checkins[n]) return checkins[n];
@@ -953,6 +956,22 @@ function extractRutToken(rawText){
   return m ? m[0].toUpperCase() : null;
 }
 
+function extractNameGuess(rawText){
+  // El contenido crudo del QR/código suele traer más que el RUT (nombres,
+  // fechas, URLs de verificación, etc.), separado por '@', '|', ';' o saltos
+  // de línea. Cuando no logramos encontrar al alumno por RUT, mostramos el
+  // mejor intento de "esto podría ser el nombre" para que el staff no se
+  // quede sin ninguna pista y pueda buscarlo a mano.
+  if(!rawText) return null;
+  const parts = rawText.split(/[|@;\n\r]+/).map(s=>s.trim()).filter(Boolean);
+  const nameLike = parts.filter(p =>
+    /^[a-zà-ÿñ\s.'-]{4,60}$/i.test(p) &&
+    !/^https?:/i.test(p) &&
+    !/^\d+$/.test(p)
+  );
+  return nameLike.length ? nameLike.join(' ').trim() : null;
+}
+
 function scanAvailable(){
   return !!(window.ZXing && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
@@ -1032,7 +1051,15 @@ function onScanResult(result, err){
 function handleScannedRut(rut, raw){
   const statusEl = document.getElementById('scanStatus');
   if(!rut){
-    statusEl.textContent = 'Código leído pero no se detectó un RUT — probando de nuevo…';
+    // El código se leyó bien pero no tenía ningún bloque con forma de RUT.
+    // No se detiene el escaneo (puede ser solo una lectura parcial de otro
+    // código presente en la credencial) pero se muestra igual cualquier
+    // nombre reconocible dentro del texto crudo, para que el staff tenga
+    // algo con qué buscar a mano si el problema persiste.
+    const nameGuess = extractNameGuess(raw);
+    statusEl.textContent = nameGuess
+      ? 'Código leído (¿' + nameGuess + '?) pero sin RUT — sigue intentando o búscalo por nombre en la pestaña Buscar.'
+      : 'Código leído pero no se detectó un RUT — probando de nuevo…';
     return;
   }
   statusEl.textContent = 'RUT detectado: ' + rut;
@@ -1050,18 +1077,21 @@ function handleScannedRut(rut, raw){
 
   const matchN = learnedRutMatch(rut);
   if(matchN){
+    const yaLlegado = !!getCheckin(matchN).arrived;
     openStudent = matchN;
     stopScanning();
     switchToBuscar();
     searchInput.value = '';
+    hideScanPendingBanner();
     renderResults();
-    toast('Encontrado: '+rosterByN[matchN].nombre);
+    toast(yaLlegado ? 'Ya estaba registrado: '+rosterByN[matchN].nombre : 'Encontrado: '+rosterByN[matchN].nombre);
     // Asegura que el panel de confirmación (con los acompañantes) quede
     // visible de inmediato, sin que el staff tenga que desplazarse a mano.
     const openedDetail = document.querySelector(`[data-detail-n="${matchN}"]`);
     if(openedDetail) openedDetail.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } else {
     pendingScanRut = rut;
+    pendingScanNameGuess = extractNameGuess(raw);
     stopScanning();
     switchToBuscar();
     showScanPendingBanner();
@@ -1079,7 +1109,22 @@ function switchToBuscar(){
 function showScanPendingBanner(){
   const b = document.getElementById('scanPendingBanner');
   b.style.display = '';
-  b.textContent = 'RUT escaneado (' + pendingScanRut + ') sin coincidencia todavía. Busca al alumno por nombre y ábrelo para asociarlo.';
+  b.classList.add('danger');
+  let msg = 'Alumno no encontrado. El código escaneado trae el RUT ' + pendingScanRut + ', pero no coincide con ningún alumno cargado.';
+  if(pendingScanNameGuess){
+    msg += ' El código también mostraba: "' + pendingScanNameGuess + '" — puedes buscarlo por ese nombre abajo.';
+  } else {
+    msg += ' Búscalo por nombre abajo para asociarlo a mano.';
+  }
+  b.textContent = msg;
+}
+
+function hideScanPendingBanner(){
+  const b = document.getElementById('scanPendingBanner');
+  b.style.display = 'none';
+  b.classList.remove('danger');
+  pendingScanRut = null;
+  pendingScanNameGuess = null;
 }
 
 function stopScanning(){
