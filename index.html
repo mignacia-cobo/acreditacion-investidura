@@ -403,6 +403,14 @@
     font-size:11px; font-weight:500; color:var(--ink-faint); line-height:1.3;
     text-decoration:none; /* nunca tachado, aunque el nombre del alumno se marque como llamado */
   }
+  /* Ícono de staff/docente como SVG vectorial (no emoji): el emoji 🎓 se ve
+     bien en pantalla pero muchos motores de impresión/PDF no lo incrustan y
+     el ícono desaparece en el PDF impreso -- pedido explícito de la usuaria,
+     2026-09-09, tarde, tras notar que el ícono no salía en el PDF. Un SVG
+     inline sí se imprime siempre, en pantalla y en PDF. */
+  .diploma-icon-staff{
+    width:12px; height:12px; vertical-align:-1.5px; margin-right:3px; fill:currentColor; flex:none;
+  }
   .name-item .new-tag{
     font-size:9.5px; font-weight:700; color:var(--success); background:var(--success-wash);
     padding:1px 6px; border-radius:6px; margin-left:auto; flex:none;
@@ -818,11 +826,18 @@ function pickAutoStaff(){
   return staffList.slice().sort((a,b) => (counts[a.nombre]-counts[b.nombre]) || (a.num-b.num))[0];
 }
 
-// Reglas (confirmadas con la usuaria): (1) si hay un acompañante marcado con
-// estrella, esa persona entrega el diploma — no se toca. (2) si el alumno
-// tiene acompañantes pero ninguno está marcado, se deja "sin asignar" para
-// que el staff elija a mano. (3) si el alumno NO tiene ningún acompañante,
-// se asigna automáticamente un profesor/staff registrado.
+// Reglas (actualizadas con la usuaria, 2026-09-09, tarde): (1) si hay un
+// acompañante marcado con estrella, esa persona entrega el diploma — nunca
+// se pisa. (2) si el alumno NO tiene ningún acompañante marcado con
+// estrella -- tenga o no acompañantes registrados -- se asigna
+// automáticamente un profesor/staff registrado (reparto justo). Antes la
+// regla (2) solo aplicaba a quien no tenía NINGÚN acompañante registrado, y
+// a quien sí tenía acompañantes (pero sin marcar) se le dejaba "sin
+// asignar" para que el staff elija a mano. Pedido explícito de la usuaria:
+// la asignación automática también debe cubrir a estos últimos, para que
+// nadie quede sin nadie asignado al momento de la ceremonia -- si más
+// tarde alguien marca un acompañante con la estrella, esa elección manual
+// sigue ganando siempre (ver el return de la regla 1, arriba).
 // IMPORTANTE (cambio 2026-09-09, tarde): esta función YA NO se llama sola al
 // abrir la ficha de un alumno — eso fue lo que dejó "TEST-STAFF-PROBE" pegado
 // a una alumna real más temprano hoy. Ahora la autoasignación es una regla
@@ -835,15 +850,7 @@ function ensureDiplomaAssignment(n){
   const c = getCheckin(n);
   const active = activeCompanions(n);
   const markedCompanion = active.find(cp => cp.nombre === c.entregaDiploma);
-  if(markedCompanion) return; // acompañante marcado manualmente: prioridad total
-  if(active.length > 0){
-    // Tiene acompañante(s) pero ninguno marcado todavía: no se autoasigna
-    // staff (la regla de autoasignación es solo para "quien no tiene
-    // acompañante"). Si quedó un nombre de un staff que ya no corresponde
-    // (por ejemplo, se acaba de agregar un acompañante), se limpia.
-    if(c.entregaDiploma) saveCheckin(n, { entregaDiploma: '' });
-    return;
-  }
+  if(markedCompanion) return; // acompañante marcado manualmente: prioridad total, nunca se pisa
   const isValidStaffPick = c.entregaDiploma && staffList.some(s => s.nombre === c.entregaDiploma);
   if(isValidStaffPick) return; // ya tiene un profesor/staff asignado y sigue vigente
   const pick = pickAutoStaff();
@@ -864,14 +871,19 @@ async function applyAutoStaffAssignment(){
   if(btn){ btn.disabled = true; btn.textContent = 'Asignando…'; }
 
   // El tope por grupo ya viene aplicado en computeGroups() (ver más abajo,
-  // en la sección de Locutor) — acá solo hace falta recorrer a TODOS los
-  // alumnos ya llegados sin acompañante y asignarles, con reparto justo, un
-  // profesor/staff (sin tocar a quien ya tiene una elección manual válida).
+  // en la sección de Locutor) — acá se recorre a TODOS los alumnos ya
+  // llegados y se llama a ensureDiplomaAssignment para cada uno: la función
+  // ya sabe no tocar a quien tiene un acompañante marcado con estrella
+  // (prioridad manual), y asignar staff a cualquier otro caso -- tenga o no
+  // acompañantes registrados, mientras ninguno esté marcado como quien
+  // entrega (pedido explícito de la usuaria, 2026-09-09, tarde: la
+  // autoasignación también debe cubrir a quien tiene acompañante pero no
+  // seleccionó la estrellita de entrega, no solo a quien no tiene ningún
+  // acompañante).
   const groups = computeGroups();
   let asignados = 0;
   for(const g of groups){
     for(const it of g.items){
-      if(!it.sinAcompanante) continue;
       const before = getCheckin(it.n).entregaDiploma || '';
       ensureDiplomaAssignment(it.n);
       const after = getCheckin(it.n).entregaDiploma || '';
@@ -887,8 +899,8 @@ async function applyAutoStaffAssignment(){
   if(btn){ btn.disabled = false; btn.textContent = 'Asignar automáticamente ahora'; }
   if(resultEl){
     resultEl.textContent = asignados > 0
-      ? `${asignados} alumno(s) sin acompañante asignados a un profesor/staff.`
-      : 'No había alumnos pendientes por asignar (todos ya tenían acompañante o staff asignado).';
+      ? `${asignados} alumno(s) asignados a un profesor/staff (sin acompañante marcado con estrella).`
+      : 'No había alumnos pendientes por asignar (todos ya tenían un acompañante marcado o un profesor/staff asignado).';
   }
   toast(asignados > 0 ? 'Asignación automática aplicada' : 'Nada por asignar');
 }
@@ -1818,6 +1830,13 @@ function especialidadRank(esp){
   return idx === -1 ? ESPECIALIDAD_ORDER.length : idx;
 }
 
+// Ícono de "quien entrega el diploma es staff/docente" como SVG inline (gorro
+// de graduación) en vez del emoji 🎓 -- el emoji se ve bien en pantalla pero
+// no se imprime en el PDF con muchos motores de impresión (pedido explícito
+// de la usuaria, 2026-09-09, tarde). Un SVG con fill:currentColor sí se
+// imprime siempre, tanto en pantalla como en el PDF.
+const DIPLOMA_STAFF_ICON_SVG = '<svg class="diploma-icon-staff" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zm0 2.18L18.09 9 12 12.82 5.91 9 12 5.18zM5 13.18l7 3.82 7-3.82V19c0 1.66-3.13 3-7 3s-7-1.34-7-3v-5.82z"/></svg> ';
+
 document.getElementById('grpMinus').addEventListener('click', () => { groupSize = Math.max(1, groupSize-1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
 document.getElementById('grpPlus').addEventListener('click', () => { groupSize = Math.min(30, groupSize+1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
 document.getElementById('orderSelect').addEventListener('change', e => { orderMode = e.target.value; renderLocutor(); });
@@ -1942,17 +1961,20 @@ function renderLocutor(){
       // Vista Locutor: solo se muestra quien entrega el diploma (un único
       // nombre, sin la lista completa de acompañantes ni la palabra
       // "Entrega:" — pedido explícito de la usuaria, 2026-09-09). El ícono
-      // (🎓 staff, ★ invitado/acompañante) se muestra SIEMPRE que haya
-      // alguien asignado, prendido o apagado el check de asignación
-      // automática — "sin acompañante" es, para la usuaria, justamente
-      // quien entrega el diploma acá, así que este dato siempre es
-      // relevante y se ve igual venga de una estrella manual, del <select>
-      // de staff, o del botón de asignación automática (pedido explícito,
+      // (staff: gorro de graduación en SVG; invitado/acompañante: ★) se
+      // muestra SIEMPRE que haya alguien asignado, prendido o apagado el
+      // check de asignación automática — "sin acompañante" es, para la
+      // usuaria, justamente quien entrega el diploma acá, así que este
+      // dato siempre es relevante y se ve igual venga de una estrella
+      // manual, del <select> de staff, o del botón de asignación
+      // automática (pedido explícito, 2026-09-09, tarde). El ícono de
+      // staff usa SVG (no el emoji 🎓) para que también se vea en el PDF
+      // impreso — el emoji no se estaba imprimiendo (pedido explícito,
       // 2026-09-09, tarde).
       let diplomaLine = '';
       if(it.entregaDiploma){
         const esStaff = staffList.some(s => s.nombre === it.entregaDiploma);
-        const prefix = esStaff ? '🎓 ' : '★ ';
+        const prefix = esStaff ? DIPLOMA_STAFF_ICON_SVG : '★ ';
         diplomaLine = `<div class="name-item-guests">${prefix}${esc(it.entregaDiploma)}</div>`;
       }
       return `<div class="name-item ${called?'called':''}" data-name-n="${it.n}" data-gkey="${gkey}">
