@@ -233,6 +233,11 @@
     font-size:14px; background:var(--surface-2); color:var(--ink); font-family:'IBM Plex Mono';
     min-width:0;
   }
+  .field-row select{
+    flex:1; border:1px solid var(--border); border-radius:9px; padding:8px 10px;
+    font-size:13.5px; background:var(--surface-2); color:var(--ink); font-family:'Inter';
+    min-width:0;
+  }
 
   .section-label{
     font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
@@ -638,6 +643,18 @@ function effectiveRut(n){
   return (s && s.rut) || null;
 }
 
+// Especialidad "efectiva" de un alumno: por defecto viene del Listado Maestro
+// (roster embebido), pero el staff puede corregirla desde el detalle del
+// alumno (mismo patrón que effectiveRut) sin necesitar regenerar todo el
+// archivo. ESPECIALIDAD_VALUES es la lista de valores válidos para el <select>.
+const ESPECIALIDAD_VALUES = ['Inteligencia Artificial', 'Desarrollo de Software', 'Por confirmar', 'NO APLICA'];
+function effectiveEspecialidad(n){
+  const c = checkins[n];
+  if(c && c.especialidad) return c.especialidad;
+  const s = rosterByN[n];
+  return (s && s.especialidad) || 'Por confirmar';
+}
+
 async function saveCheckin(n, patch){
   const cur = getCheckin(n);
   const next = Object.assign({}, cur, patch, {n});
@@ -648,7 +665,7 @@ async function saveCheckin(n, patch){
   try{
     const s = rosterByN[n] || {};
     const payload = {
-      n, nombre: s.nombre || '', especialidad: s.especialidad || '',
+      n, nombre: s.nombre || '', especialidad: effectiveEspecialidad(n),
       arrived: !!next.arrived, arrivedAt: next.arrivedAt || '',
       rut: next.rut || '', companions: next.companions || []
     };
@@ -927,7 +944,7 @@ function rowHtml(n){
     <div class="result-top">
       <div>
         <div class="result-name">${esc(s.nombre)}</div>
-        <div class="result-sub">${esc(s.seccion||'—')} · ${esc(s.especialidad)}</div>
+        <div class="result-sub">${esc(s.seccion||'—')} · ${esc(effectiveEspecialidad(n))}</div>
       </div>
       <span class="badge ${c.arrived?'presente':'pendiente'}">${c.arrived ? '✓ '+fmtTime(c.arrivedAt) : 'Pendiente'}</span>
     </div>
@@ -942,7 +959,7 @@ function detailHtml(n){
     <div class="detail-head">
       <div>
         <div class="detail-name">${esc(s.nombre)}</div>
-        <div class="detail-meta">${esc(s.seccion||'—')} · ${esc(s.especialidad)}${s.correo? ' · '+esc(s.correo):''}</div>
+        <div class="detail-meta">${esc(s.seccion||'—')} · ${esc(effectiveEspecialidad(n))}${s.correo? ' · '+esc(s.correo):''}</div>
       </div>
       <button class="close-x" data-close>✕</button>
     </div>
@@ -954,6 +971,13 @@ function detailHtml(n){
     <div class="field-row">
       <label>RUT</label>
       <input type="text" data-rut value="${esc(c.rut||'')}" placeholder="Sin registrar todavía">
+    </div>
+
+    <div class="field-row">
+      <label>Especialidad</label>
+      <select data-especialidad>
+        ${ESPECIALIDAD_VALUES.map(v => `<option value="${esc(v)}" ${effectiveEspecialidad(n)===v?'selected':''}>${esc(v)}</option>`).join('')}
+      </select>
     </div>
 
     <div class="section-label">Acompañantes</div>
@@ -987,6 +1011,11 @@ function wireDetail(n){
   const rutInput = det.querySelector('[data-rut]');
   rutInput.addEventListener('change', () => {
     saveCheckin(n, { rut: rutInput.value.trim() });
+  });
+
+  const especialidadSelect = det.querySelector('[data-especialidad]');
+  especialidadSelect.addEventListener('change', () => {
+    saveCheckin(n, { especialidad: especialidadSelect.value });
   });
 
   det.querySelector('[data-add-companion]').addEventListener('click', () => {
@@ -1390,9 +1419,12 @@ document.getElementById('printLocutorBtn').addEventListener('click', () => {
 });
 
 function arrivedList(){
+  // Para el listado del Locutor: los alumnos con especialidad "NO APLICA"
+  // (dato corregible desde el detalle del alumno) no deben aparecer aquí,
+  // aunque sí sigan contando como acreditados en las estadísticas generales.
   return Object.values(checkins)
-    .filter(c => c.arrived && rosterByN[c.n])
-    .map(c => Object.assign({}, rosterByN[c.n], {arrivedAt:c.arrivedAt}));
+    .filter(c => c.arrived && rosterByN[c.n] && effectiveEspecialidad(c.n) !== 'NO APLICA')
+    .map(c => Object.assign({}, rosterByN[c.n], {arrivedAt:c.arrivedAt, especialidad: effectiveEspecialidad(c.n)}));
 }
 
 function computeGroups(){
@@ -1489,7 +1521,7 @@ document.getElementById('exportBtn').addEventListener('click', () => {
     const comps = (c.companions||[]);
     const compsLlegados = comps.filter(cp=>cp.arrived).length;
     const compsDetalle = comps.map(cp => `${cp.nombre||'(sin nombre)'} ${cp.rut||''} [${cp.arrived?'llegó '+fmtTime(cp.arrivedAt):'pendiente'}]`).join(' | ');
-    rows.push([s.n, s.nombre, s.seccion, s.especialidad, c.rut||'', c.arrived?'Sí':'No', fmtTime(c.arrivedAt), compsLlegados, compsDetalle]);
+    rows.push([s.n, s.nombre, s.seccion, effectiveEspecialidad(s.n), c.rut||'', c.arrived?'Sí':'No', fmtTime(c.arrivedAt), compsLlegados, compsDetalle]);
   });
   const csv = rows.map(r => r.map(v => `"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const filename = 'acreditacion_investidura_'+new Date().toISOString().slice(0,10)+'.csv';
