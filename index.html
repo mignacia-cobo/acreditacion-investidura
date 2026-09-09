@@ -344,12 +344,17 @@
     color:var(--accent); margin-bottom:6px;
   }
   .name-item{
-    display:flex; align-items:center; gap:9px; padding:6px 2px; font-size:15px; border-radius:7px;
+    display:flex; align-items:flex-start; gap:9px; padding:6px 2px; font-size:15px; border-radius:7px;
   }
-  .name-item .idx{ font-family:'IBM Plex Mono'; color:var(--ink-faint); font-size:12px; width:18px; flex:none; }
+  .name-item .idx{ font-family:'IBM Plex Mono'; color:var(--ink-faint); font-size:12px; width:18px; flex:none; margin-top:2px; }
   .name-item .apn{ font-weight:700; }
   .name-item.called{ text-decoration:line-through; color:var(--ink-faint); }
   .name-item.called .apn{ font-weight:700; }
+  .name-item-main{ display:flex; flex-direction:column; gap:1px; flex:1; min-width:0; }
+  .name-item-guests{
+    font-size:11px; font-weight:500; color:var(--ink-faint); line-height:1.3;
+    text-decoration:none; /* nunca tachado, aunque el nombre del alumno se marque como llamado */
+  }
   .name-item .new-tag{
     font-size:9.5px; font-weight:700; color:var(--success); background:var(--success-wash);
     padding:1px 6px; border-radius:6px; margin-left:auto; flex:none;
@@ -1432,9 +1437,16 @@ function renderLocutor(){
     const espLabel = g.esp ? `<div class="group-esp">${esc(g.esp)}</div>` : '';
     const names = g.items.map((it,idx) => {
       const called = calledGroups[gkey+'-'+it.n];
+      const guests = (getCheckin(it.n).companions || []).filter(cp => cp.arrived);
+      const guestsLine = guests.length
+        ? `<div class="name-item-guests">+ ${esc(guests.map(cp => cp.nombre || '(sin nombre)').join(', '))}</div>`
+        : `<div class="name-item-guests">*</div>`;
       return `<div class="name-item ${called?'called':''}" data-name-n="${it.n}" data-gkey="${gkey}">
         <span class="idx mono">${idx+1}</span>
-        <span>${esc(nombrePila(it.nombre))} <span class="apn">${esc(bothApellidos(it.nombre))}</span></span>
+        <div class="name-item-main">
+          <span>${esc(nombrePila(it.nombre))} <span class="apn">${esc(bothApellidos(it.nombre))}</span></span>
+          ${guestsLine}
+        </div>
       </div>`;
     }).join('');
     return `<div class="group-card ${done?'done':''}">
