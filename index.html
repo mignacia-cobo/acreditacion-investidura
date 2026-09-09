@@ -766,23 +766,59 @@ function getCheckin(n){
   };
 }
 
+// RUT "efectivo": el RUT capturado EN VIVO en esta misma estación (escaneo
+// de cédula, "Cargar RUTs", o el que ya venía guardado en un checkin previo)
+// sigue ganando siempre -- es la vía activa de captura del evento. BBDD entra
+// solo como respaldo, POR DELANTE del roster estático, para un alumno cuyo
+// RUT todavía no se capturó en ninguna estación pero sí está cargado en BBDD
+// (2026-09-09).
 function effectiveRut(n){
   const c = checkins[n];
   if(c && c.rut) return c.rut;
+  const b = bbddByN[n];
+  if(b && b.rut) return b.rut;
   const s = rosterByN[n];
   return (s && s.rut) || null;
 }
 
-// Especialidad "efectiva" de un alumno: por defecto viene del Listado Maestro
-// (roster embebido), pero el staff puede corregirla desde el detalle del
-// alumno (mismo patrón que effectiveRut) sin necesitar regenerar todo el
-// archivo. ESPECIALIDAD_VALUES es la lista de valores válidos para el <select>.
+// Especialidad "efectiva" de un alumno: BBDD (fuente de verdad, editable vía
+// AppSheet) pasa a tener prioridad (2026-09-09) -- la edición manual desde el
+// detalle del alumno ya no existe (ver comentario en wireDetail), así que un
+// checkin.especialidad guardado es solo un valor histórico de antes de ese
+// cambio. Si BBDD no tiene dato para este alumno, se cae al valor guardado
+// (si existe) y luego al Listado Maestro embebido, como siempre.
+// ESPECIALIDAD_VALUES es la lista de valores válidos para el <select> (staff).
 const ESPECIALIDAD_VALUES = ['Inteligencia Artificial', 'Desarrollo de Software', 'Por confirmar', 'NO APLICA'];
 function effectiveEspecialidad(n){
+  const b = bbddByN[n];
+  if(b && b.especialidad) return b.especialidad;
   const c = checkins[n];
   if(c && c.especialidad) return c.especialidad;
   const s = rosterByN[n];
   return (s && s.especialidad) || 'Por confirmar';
+}
+
+// Sección "efectiva": BBDD por delante del Listado Maestro embebido. Nunca
+// hubo una vía de corrección manual para Sección en esta app, así que no
+// hace falta revisar checkins (2026-09-09).
+function effectiveSeccion(n){
+  const b = bbddByN[n];
+  if(b && b.seccion) return b.seccion;
+  const s = rosterByN[n];
+  return (s && s.seccion) || '';
+}
+
+// Nombre completo "efectivo": BBDD por delante del Listado Maestro embebido,
+// SOLO para mostrarlo en pantalla/CSV/correo -- a propósito no se usa para
+// ordenar ni agrupar en Locutor (eso sigue anclado a rosterByN[n].apellido,
+// calculado una sola vez al cargar la página, para no reordenar/reagrupar
+// grupos que ya están en curso en pleno evento si BBDD trae solo una
+// corrección de ortografía) (2026-09-09).
+function effectiveNombre(n){
+  const b = bbddByN[n];
+  if(b && b.nombre) return b.nombre;
+  const s = rosterByN[n];
+  return (s && s.nombre) || '';
 }
 
 // Asistencia "efectiva" de un alumno: por defecto viene de ASISTE_MAP (columna
@@ -1424,8 +1460,8 @@ function rowHtml(n){
   return `<div class="result-row ${open?'open':''}" data-n="${n}">
     <div class="result-top">
       <div>
-        <div class="result-name">${esc(s.nombre)}</div>
-        <div class="result-sub">${esc(s.seccion||'—')} · ${esc(effectiveEspecialidad(n))}</div>
+        <div class="result-name">${esc(effectiveNombre(n))}</div>
+        <div class="result-sub">${esc(effectiveSeccion(n)||'—')} · ${esc(effectiveEspecialidad(n))}</div>
         ${noAsisteFlag}
       </div>
       <span class="badge ${c.arrived?'presente':'pendiente'}">${c.arrived ? '✓ '+fmtTime(c.arrivedAt) : 'Pendiente'}</span>
@@ -1440,14 +1476,17 @@ function detailHtml(n){
   return `<div class="detail" data-detail-n="${n}">
     <div class="detail-head">
       <div>
-        <div class="detail-name">${esc(s.nombre)}</div>
+        <div class="detail-name">${esc(effectiveNombre(n))}</div>
         <!-- Pedido explícito de la usuaria (2026-09-09): no repetir la
              Especialidad en una segunda línea -- se fusionó todo en esta
-             primera línea (sección/especialidad/correo + RUT + Asiste). -->
+             primera línea (sección/especialidad/correo + RUT + Asiste).
+             Sección/especialidad/correo/RUT ahora pasan por effectiveSeccion/
+             effectiveEspecialidad/effectiveCorreo/effectiveRut, que priorizan
+             BBDD (fuente de verdad en vivo) -- ver esas funciones más arriba. -->
         <div class="detail-meta info-line">
-          <span>${esc(s.seccion||'—')} · ${esc(effectiveEspecialidad(n))}${s.correo? ' · '+esc(s.correo):''}</span>
+          <span>${esc(effectiveSeccion(n)||'—')} · ${esc(effectiveEspecialidad(n))}${effectiveCorreo(n)? ' · '+esc(effectiveCorreo(n)):''}</span>
           <span class="info-sep">·</span>
-          <span class="info-item ${c.rut?'':'empty'}"><b>RUT</b><span class="mono" data-rut-view>${c.rut ? esc(c.rut) : 'Sin registrar todavía'}</span></span>
+          <span class="info-item ${effectiveRut(n)?'':'empty'}"><b>RUT</b><span class="mono" data-rut-view>${effectiveRut(n) ? esc(effectiveRut(n)) : 'Sin registrar todavía'}</span></span>
           <span class="info-sep">·</span>
           <span class="info-item ${effectiveAsiste(n)===''?'empty':''}"><b>Asiste</b><span data-asiste-view>${effectiveAsiste(n) || 'Sin confirmar'}</span></span>
         </div>
@@ -1966,7 +2005,12 @@ function arrivedList(){
     .filter(c => c.arrived && rosterByN[c.n] && effectiveEspecialidad(c.n) !== 'NO APLICA')
     .map(c => {
       const tieneAcompananteQueEntrega = activeCompanions(c.n).some(cp => cp.nombre === c.entregaDiploma);
+      // nombre: effectiveNombre(c.n) (2026-09-09) -- solo el TEXTO mostrado se
+      // corrige desde BBDD; "apellido" (clave de orden/agrupación) NO se
+      // toca acá a propósito, queda anclado al roster original, para no
+      // reordenar/reagrupar grupos ya en curso en pleno evento.
       return Object.assign({}, rosterByN[c.n], {
+        nombre: effectiveNombre(c.n),
         arrivedAt:c.arrivedAt, especialidad: effectiveEspecialidad(c.n), entregaDiploma: c.entregaDiploma || '',
         sinAcompanante: !tieneAcompananteQueEntrega
       });
@@ -2316,7 +2360,7 @@ document.getElementById('exportBtn').addEventListener('click', () => {
     const comps = (c.companions||[]);
     const compsLlegados = comps.filter(cp=>cp.arrived).length;
     const compsDetalle = comps.map(cp => `${cp.nombre||'(sin nombre)'} ${cp.rut||''} [${cp.arrived?'llegó '+fmtTime(cp.arrivedAt):'pendiente'}]`).join(' | ');
-    rows.push([s.n, s.nombre, s.seccion, effectiveEspecialidad(s.n), effectiveAsiste(s.n)||'Sin confirmar', c.rut||'', c.arrived?'Sí':'No', fmtTime(c.arrivedAt), compsLlegados, compsDetalle, c.entregaDiploma||'']);
+    rows.push([s.n, effectiveNombre(s.n), effectiveSeccion(s.n), effectiveEspecialidad(s.n), effectiveAsiste(s.n)||'Sin confirmar', effectiveRut(s.n)||'', c.arrived?'Sí':'No', fmtTime(c.arrivedAt), compsLlegados, compsDetalle, c.entregaDiploma||'']);
   });
   const csv = rows.map(r => r.map(v => `"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const filename = 'acreditacion_investidura_'+new Date().toISOString().slice(0,10)+'.csv';
