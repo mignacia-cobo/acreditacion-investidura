@@ -398,6 +398,38 @@
     padding:4px 11px; border-radius:999px; pointer-events:none; white-space:nowrap;
     letter-spacing:.01em;
   }
+  .print-btn{
+    border:1px solid var(--accent-soft); background:var(--accent-wash); color:var(--accent);
+    border-radius:8px; padding:7px 12px; font-size:12.5px; font-weight:700; cursor:pointer;
+    font-family:'Inter';
+  }
+  .print-only{ display:none; }
+
+  /* ============================================================
+     Impresión: al usar el botón "Imprimir / PDF" en Locutor, solo se
+     imprime la lista de grupos tal como está en ese momento (o sea, solo
+     los alumnos que ya confirmaron llegada hasta ese instante) — todo lo
+     demás (topbar, pestañas, buscador, controles, botones) se oculta.
+     Sirve para usarlo cuantas veces se quiera durante la ceremonia.
+     ============================================================ */
+  @media print{
+    body{ background:#fff; }
+    .topbar, .tabs, .subtabs, .footer-note, .locutor-bar, .progress-wrap,
+    #view-acreditacion, .group-mark, .print-btn{
+      display:none !important;
+    }
+    .print-only{ display:block; }
+    .wrap{ max-width:none; padding:0; }
+    #view-locutor{ display:block !important; }
+    .groups-grid{
+      display:block; column-count:2; column-gap:18px;
+    }
+    .group-card{
+      border:1px solid #ccc; box-shadow:none; break-inside:avoid; page-break-inside:avoid;
+      margin-bottom:12px; padding:10px 12px;
+    }
+    .name-item.called{ text-decoration:line-through; color:#888; }
+  }
 </style>
 </head>
 <body>
@@ -473,6 +505,12 @@
       <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     </div>
 
+    <!-- Encabezado que solo aparece al imprimir (ver botón "Imprimir / PDF" abajo) -->
+    <div class="print-only" style="margin-bottom:14px;">
+      <div style="font-family:'Manrope'; font-weight:800; font-size:18px;">Investidura de Especialidad — Listado Locutor</div>
+      <div style="font-size:12.5px; color:#555; margin-top:2px;" id="printMeta"></div>
+    </div>
+
     <div class="locutor-bar">
       <div class="ctrl">
         <label>Tamaño de grupo</label>
@@ -488,6 +526,10 @@
           <option value="apellido">Alfabético (apellido)</option>
           <option value="especialidad" selected>Por especialidad</option>
         </select>
+      </div>
+      <div class="ctrl">
+        <label>&nbsp;</label>
+        <button class="print-btn" id="printLocutorBtn">🖨️ Imprimir / PDF</button>
       </div>
     </div>
 
@@ -1328,6 +1370,19 @@ function especialidadRank(esp){
 document.getElementById('grpMinus').addEventListener('click', () => { groupSize = Math.max(1, groupSize-1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
 document.getElementById('grpPlus').addEventListener('click', () => { groupSize = Math.min(30, groupSize+1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
 document.getElementById('orderSelect').addEventListener('change', e => { orderMode = e.target.value; renderLocutor(); });
+
+document.getElementById('printLocutorBtn').addEventListener('click', () => {
+  // Se imprime exactamente lo que hay en pantalla en este momento: solo los
+  // alumnos que ya confirmaron llegada hasta ahora, en el orden/tamaño de
+  // grupo configurados. Se puede usar cuantas veces se quiera durante la
+  // ceremonia (a medida que van llegando más alumnos).
+  const presentes = document.getElementById('locPresentes').textContent;
+  const total = document.getElementById('locTotal').textContent;
+  const ahora = new Date().toLocaleString('es-CL', { dateStyle: 'long', timeStyle: 'short' });
+  document.getElementById('printMeta').textContent =
+    'Generado ' + ahora + ' — ' + presentes + ' de ' + total + ' alumnos presentes al momento de imprimir.';
+  window.print();
+});
 
 function arrivedList(){
   return Object.values(checkins)
