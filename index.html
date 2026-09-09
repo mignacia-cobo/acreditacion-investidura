@@ -861,7 +861,16 @@ async function pollCheckins(){
     for(const key of Object.keys(serverCheckins)){
       const lastWrite = lastLocalWriteAt[key] || 0;
       if(now - lastWrite > 8000){
-        merged[key] = serverCheckins[key];
+        // OJO 2: la planilla compartida ("checkins-investidura") todavía no
+        // tiene columna "asiste" -- el servidor nunca la devuelve. Si acá
+        // reemplazáramos el objeto entero, cualquier corrección de Asiste
+        // hecha desde el detalle desaparecería sola a los pocos segundos
+        // (el próximo poll la borraba). Por eso fusionamos en vez de
+        // reemplazar: los campos que el servidor SÍ trae (rut, especialidad,
+        // arrived, companions, etc.) siguen ganando como siempre, pero
+        // "asiste" -- que solo vive en este navegador mientras la planilla
+        // no tenga esa columna -- se conserva.
+        merged[key] = Object.assign({}, checkins[key], serverCheckins[key]);
       }
     }
     checkins = merged;
