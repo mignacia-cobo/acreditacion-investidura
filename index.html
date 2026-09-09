@@ -584,6 +584,7 @@
         <select id="orderSelect">
           <option value="apellido">Alfabético (apellido)</option>
           <option value="especialidad" selected>Por especialidad</option>
+          <option value="especialidad-hora">Por especialidad y hora de llegada</option>
         </select>
       </div>
       <div class="ctrl">
@@ -1881,7 +1882,15 @@ function computeGroups(){
     if(current.length) groups.push({esp:null, items:reorderGroupItems(current)});
     return groups;
   }
-  list.sort((a,b) => especialidadRank(a.especialidad) - especialidadRank(b.especialidad) || a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es'));
+  // "especialidad" y "especialidad-hora" comparten el mismo agrupamiento por
+  // especialidad (IA primero, ver ESPECIALIDAD_ORDER) — solo cambia el orden
+  // secundario DENTRO de cada especialidad: alfabético por apellido, o por
+  // hora de llegada (quien confirmó llegada primero, primero) — pedido
+  // explícito de la usuaria, 2026-09-09 tarde.
+  const ordenSecundario = orderMode === 'especialidad-hora'
+    ? (a,b) => (a.arrivedAt||'').localeCompare(b.arrivedAt||'')
+    : (a,b) => a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es');
+  list.sort((a,b) => especialidadRank(a.especialidad) - especialidadRank(b.especialidad) || ordenSecundario(a,b));
   const groups = [];
   let current = []; let curEsp = null; let sinCount = 0;
   list.forEach(item => {
