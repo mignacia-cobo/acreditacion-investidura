@@ -1395,17 +1395,18 @@ function detailHtml(n){
     <div class="detail-head">
       <div>
         <div class="detail-name">${esc(s.nombre)}</div>
-        <div class="detail-meta">${esc(s.seccion||'—')} · ${esc(effectiveEspecialidad(n))}${s.correo? ' · '+esc(s.correo):''}</div>
+        <!-- Pedido explícito de la usuaria (2026-09-09): no repetir la
+             Especialidad en una segunda línea -- se fusionó todo en esta
+             primera línea (sección/especialidad/correo + RUT + Asiste). -->
+        <div class="detail-meta info-line">
+          <span>${esc(s.seccion||'—')} · ${esc(effectiveEspecialidad(n))}${s.correo? ' · '+esc(s.correo):''}</span>
+          <span class="info-sep">·</span>
+          <span class="info-item ${c.rut?'':'empty'}"><b>RUT</b><span class="mono" data-rut-view>${c.rut ? esc(c.rut) : 'Sin registrar todavía'}</span></span>
+          <span class="info-sep">·</span>
+          <span class="info-item ${effectiveAsiste(n)===''?'empty':''}"><b>Asiste</b><span data-asiste-view>${effectiveAsiste(n) || 'Sin confirmar'}</span></span>
+        </div>
       </div>
       <button class="close-x" data-close>✕</button>
-    </div>
-
-    <div class="info-line">
-      <span class="info-item ${c.rut?'':'empty'}"><b>RUT</b><span class="mono" data-rut-view>${c.rut ? esc(c.rut) : 'Sin registrar todavía'}</span></span>
-      <span class="info-sep">·</span>
-      <span class="info-item"><b>Especialidad</b><span data-especialidad-view>${esc(effectiveEspecialidad(n))}</span></span>
-      <span class="info-sep">·</span>
-      <span class="info-item ${effectiveAsiste(n)===''?'empty':''}"><b>Asiste</b><span data-asiste-view>${effectiveAsiste(n) || 'Sin confirmar'}</span></span>
     </div>
 
     <button class="confirm-btn ${c.arrived?'on':'off'}" data-confirm>
