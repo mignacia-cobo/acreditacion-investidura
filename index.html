@@ -934,7 +934,7 @@ function openStaffModal(){
     <div class="modal-bg" id="staffBg">
       <div class="modal" style="max-width:420px;">
         <h3>Registrar profesor/staff</h3>
-        <p>Nombre de la persona que va a entregar diplomas hoy (ej: "Prof. María Ignacia Cobo"). Se agrega a una lista compartida — cualquier estación la ve.</p>
+        <p>Nombre de la persona que va a entregar diplomas hoy (ej: "Prof. Juan Pérez"). Se agrega a una lista compartida — cualquier estación la ve.</p>
         <input type="text" id="staffNameInput" style="width:100%; border:1px solid var(--border); border-radius:9px; padding:10px; background:var(--surface-2); color:var(--ink); font-size:14px;" placeholder="Nombre completo…">
         <div id="staffResult" style="font-size:12.5px; color:var(--ink-soft); margin-top:10px; max-height:140px; overflow:auto;"></div>
         <div class="section-label" style="margin-top:14px;">Ya registrados</div>
@@ -1734,18 +1734,16 @@ function renderLocutor(){
     const espLabel = g.esp ? `<div class="group-esp">${esc(g.esp)}</div>` : '';
     const names = g.items.map((it,idx) => {
       const called = calledGroups[gkey+'-'+it.n];
-      const guests = (getCheckin(it.n).companions || []).filter(cp => cp.arrived);
-      const guestsLine = guests.length
-        ? `<div class="name-item-guests">+ ${esc(guests.map(cp => cp.nombre || '(sin nombre)').join(', '))}</div>`
-        : `<div class="name-item-guests">*</div>`;
+      // Vista Locutor: solo se muestra quien entrega el diploma (un único
+      // nombre, sin la lista completa de acompañantes ni la palabra
+      // "Entrega:" — pedido explícito de la usuaria, 2026-09-09).
       const diplomaLine = it.entregaDiploma
-        ? `<div class="name-item-guests">🎓 Entrega: ${esc(it.entregaDiploma)}</div>`
+        ? `<div class="name-item-guests">${esc(it.entregaDiploma)}</div>`
         : '';
       return `<div class="name-item ${called?'called':''}" data-name-n="${it.n}" data-gkey="${gkey}">
         <span class="idx mono">${idx+1}</span>
         <div class="name-item-main">
           <span>${esc(nombrePila(it.nombre))} <span class="apn">${esc(bothApellidos(it.nombre))}</span></span>
-          ${guestsLine}
           ${diplomaLine}
         </div>
       </div>`;
