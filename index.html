@@ -192,7 +192,15 @@
   }
   .subtab.active{ background:var(--accent-wash); color:var(--accent); border-color:var(--accent-soft); }
 
-  .result-list{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  /* Pedido explícito de la usuaria (2026-09-09): al entrar a Acreditación
+     sin buscar nada, ahora se puede hacer scroll para ver a TODOS los
+     alumnos (antes solo se mostraban los primeros 8, ver matchStudents()).
+     max-height + overflow-y:auto acotan la lista a un panel scrolleable en
+     vez de estirar toda la página. */
+  .result-list{
+    display:flex; flex-direction:column; gap:8px; margin-top:12px;
+    max-height:60vh; overflow-y:auto;
+  }
   .result-row{
     background:var(--surface); border:1px solid var(--border); border-radius:12px;
     padding:12px 14px; cursor:pointer; transition:border-color .12s;
@@ -1300,7 +1308,15 @@ document.getElementById('soloConfirmadosCheck').addEventListener('change', rende
 
 function matchStudents(query){
   const q = query.trim();
-  if(!q) return ROSTER.slice(0,8).map(s=>s.n); // sugerencia inicial corta
+  // Pedido explícito de la usuaria (2026-09-09): la lista default (sin
+  // buscar nada) muestra a TODOS los alumnos, no solo los primeros 8 --
+  // ahora se puede hacer scroll para verlos (ver .result-list en el CSS).
+  // Se ordenan alfabéticamente por apellido para que sea fácil recorrerla.
+  if(!q){
+    return ROSTER.slice()
+      .sort((a,b) => a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es'))
+      .map(s=>s.n);
+  }
   if(isMostlyDigits(q)){
     const byRut = learnedRutMatch(q);
     if(byRut) return [byRut];
