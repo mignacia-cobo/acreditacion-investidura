@@ -176,6 +176,14 @@
     padding:2px 4px; line-height:1;
   }
 
+  .filter-row{ display:flex; align-items:center; margin-top:10px; }
+  .check-label{
+    display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600;
+    color:var(--ink-soft); cursor:pointer; user-select:none;
+  }
+  .check-label input[type=checkbox]{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
+  .no-asiste-flag{ font-size:11px; font-weight:700; color:var(--danger); margin-top:3px; }
+
   .subtabs{ display:flex; gap:8px; margin:12px 0; }
   .subtab{
     padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600;
@@ -484,6 +492,12 @@
         <input id="searchInput" type="text" placeholder="Nombre, apellido o RUT del alumno…" autocomplete="off">
         <button class="clear-btn" id="clearSearch" title="Limpiar">✕</button>
       </div>
+      <div class="filter-row">
+        <label class="check-label">
+          <input type="checkbox" id="soloConfirmadosCheck" checked>
+          Solo confirmados
+        </label>
+      </div>
       <div id="scanPendingBanner" style="display:none" class="scan-banner"></div>
       <div class="result-list" id="resultList"></div>
     </div>
@@ -579,6 +593,14 @@ const ROSTER_FULL = [{"n": 85, "nombre": "Aaron Caleb Perez Gonzalez", "correo":
 // vez hace falta ver el listado completo original.
 const ROSTER = ROSTER_FULL.filter(s => s.especialidad !== 'NO APLICA');
 
+// Asistencia confirmada según la columna "Asiste" del Listado Maestro
+// (hoja "Listado Maestro", 2026-09-09): "Sí" / "No" / "" (vacío = todavía
+// sin confirmar). Se fusiona en cada alumno como s.asiste; desde ahí el
+// staff puede corregirla en vivo (mismo patrón de override que RUT y
+// Especialidad) vía effectiveAsiste().
+const ASISTE_MAP = {"1":"Sí","2":"Sí","3":"Sí","4":"Sí","5":"Sí","6":"","7":"Sí","8":"","9":"Sí","10":"Sí","11":"Sí","12":"Sí","13":"Sí","14":"","15":"","16":"Sí","17":"Sí","18":"","19":"Sí","20":"","21":"Sí","22":"Sí","23":"","24":"No","25":"Sí","26":"Sí","27":"","28":"No","29":"No","30":"Sí","31":"Sí","32":"No","33":"","34":"Sí","35":"","36":"Sí","37":"Sí","38":"","39":"Sí","40":"No","41":"Sí","42":"","43":"Sí","44":"Sí","45":"No","46":"","47":"Sí","48":"Sí","49":"","50":"","51":"Sí","52":"No","53":"Sí","54":"Sí","55":"Sí","56":"Sí","57":"Sí","58":"Sí","59":"No","60":"Sí","61":"","62":"Sí","63":"","64":"Sí","65":"Sí","66":"Sí","67":"Sí","68":"","69":"Sí","70":"Sí","71":"Sí","72":"No","73":"Sí","74":"No","75":"Sí","76":"Sí","77":"No","78":"Sí","79":"No","80":"Sí","81":"Sí","82":"Sí","83":"Sí","84":"","85":"Sí","86":"Sí","87":"No","88":"Sí","89":"Sí","90":"Sí","91":"No","92":"Sí","93":"No","94":"Sí","95":"No","96":"No","97":"Sí","98":"Sí","99":"No","100":"Sí","101":"Sí","102":"No","103":"No","104":"No","105":"","106":"Sí","107":"Sí","108":"Sí","109":"Sí","110":"No","111":"Sí","112":"Sí","113":"Sí","114":"No"};
+ROSTER_FULL.forEach(s => { s.asiste = ASISTE_MAP[s.n] || ''; });
+
 const rosterByN = {};
 ROSTER.forEach(s => rosterByN[s.n] = s);
 
@@ -662,6 +684,17 @@ function effectiveEspecialidad(n){
   return (s && s.especialidad) || 'Por confirmar';
 }
 
+// Asistencia "efectiva" de un alumno: por defecto viene de ASISTE_MAP (columna
+// "Asiste" del Listado Maestro), pero el staff puede confirmarla o corregirla
+// en vivo desde el detalle (mismo patrón que RUT/Especialidad). '' = sin
+// confirmar todavía (vacío en la planilla original).
+function effectiveAsiste(n){
+  const c = checkins[n];
+  if(c && c.asiste) return c.asiste;
+  const s = rosterByN[n];
+  return (s && s.asiste) || '';
+}
+
 async function saveCheckin(n, patch){
   const cur = getCheckin(n);
   const next = Object.assign({}, cur, patch, {n});
@@ -673,6 +706,7 @@ async function saveCheckin(n, patch){
     const s = rosterByN[n] || {};
     const payload = {
       n, nombre: s.nombre || '', especialidad: effectiveEspecialidad(n),
+      asiste: effectiveAsiste(n),
       arrived: !!next.arrived, arrivedAt: next.arrivedAt || '',
       rut: next.rut || '', companions: next.companions || []
     };
@@ -896,6 +930,7 @@ searchInput.addEventListener('input', renderResults);
 document.getElementById('clearSearch').addEventListener('click', () => {
   searchInput.value=''; renderResults(); searchInput.focus();
 });
+document.getElementById('soloConfirmadosCheck').addEventListener('change', renderResults);
 
 function matchStudents(query){
   const q = query.trim();
@@ -912,6 +947,14 @@ function matchStudents(query){
 function renderResults(){
   const list = document.getElementById('resultList');
   let ns = matchStudents(searchInput.value);
+  // "Solo confirmados" (checked por defecto): oculta a quienes no han
+  // confirmado asistencia (Asiste = "Sí" en el Listado Maestro, o "Sí" vía
+  // corrección manual desde el detalle). Al destildarlo se ve el listado
+  // completo y los que dijeron que NO asistirían quedan marcados (ver rowHtml).
+  const soloConfirmadosCheck = document.getElementById('soloConfirmadosCheck');
+  if(soloConfirmadosCheck && soloConfirmadosCheck.checked){
+    ns = ns.filter(n => effectiveAsiste(n) === 'Sí');
+  }
   // Si hay un alumno "abierto" (por ejemplo, recién detectado por escaneo) pero
   // no aparece en la lista filtrada actual (que por defecto solo muestra 8
   // sugerencias), lo agregamos igual al principio para que su panel de
@@ -947,11 +990,15 @@ function rowHtml(n){
   const s = rosterByN[n];
   const c = getCheckin(n);
   const open = openStudent === n;
+  const noAsisteFlag = effectiveAsiste(n) === 'No'
+    ? '<div class="no-asiste-flag">⚠ Indicó que NO asistiría</div>'
+    : '';
   return `<div class="result-row ${open?'open':''}" data-n="${n}">
     <div class="result-top">
       <div>
         <div class="result-name">${esc(s.nombre)}</div>
         <div class="result-sub">${esc(s.seccion||'—')} · ${esc(effectiveEspecialidad(n))}</div>
+        ${noAsisteFlag}
       </div>
       <span class="badge ${c.arrived?'presente':'pendiente'}">${c.arrived ? '✓ '+fmtTime(c.arrivedAt) : 'Pendiente'}</span>
     </div>
@@ -984,6 +1031,15 @@ function detailHtml(n){
       <label>Especialidad</label>
       <select data-especialidad>
         ${ESPECIALIDAD_VALUES.map(v => `<option value="${esc(v)}" ${effectiveEspecialidad(n)===v?'selected':''}>${esc(v)}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="field-row">
+      <label>Asiste</label>
+      <select data-asiste>
+        <option value="" ${effectiveAsiste(n)===''?'selected':''}>Sin confirmar</option>
+        <option value="Sí" ${effectiveAsiste(n)==='Sí'?'selected':''}>Sí</option>
+        <option value="No" ${effectiveAsiste(n)==='No'?'selected':''}>No</option>
       </select>
     </div>
 
@@ -1023,6 +1079,11 @@ function wireDetail(n){
   const especialidadSelect = det.querySelector('[data-especialidad]');
   especialidadSelect.addEventListener('change', () => {
     saveCheckin(n, { especialidad: especialidadSelect.value });
+  });
+
+  const asisteSelect = det.querySelector('[data-asiste]');
+  asisteSelect.addEventListener('change', () => {
+    saveCheckin(n, { asiste: asisteSelect.value });
   });
 
   det.querySelector('[data-add-companion]').addEventListener('click', () => {
@@ -1522,13 +1583,13 @@ function renderLocutor(){
    Export CSV
    ============================================================ */
 document.getElementById('exportBtn').addEventListener('click', () => {
-  const rows = [['N°','Nombre','Sección','Especialidad','RUT','Llegó','Hora llegada','Acompañantes llegados','Detalle acompañantes']];
+  const rows = [['N°','Nombre','Sección','Especialidad','Asiste (confirmó)','RUT','Llegó','Hora llegada','Acompañantes llegados','Detalle acompañantes']];
   ROSTER.forEach(s => {
     const c = getCheckin(s.n);
     const comps = (c.companions||[]);
     const compsLlegados = comps.filter(cp=>cp.arrived).length;
     const compsDetalle = comps.map(cp => `${cp.nombre||'(sin nombre)'} ${cp.rut||''} [${cp.arrived?'llegó '+fmtTime(cp.arrivedAt):'pendiente'}]`).join(' | ');
-    rows.push([s.n, s.nombre, s.seccion, effectiveEspecialidad(s.n), c.rut||'', c.arrived?'Sí':'No', fmtTime(c.arrivedAt), compsLlegados, compsDetalle]);
+    rows.push([s.n, s.nombre, s.seccion, effectiveEspecialidad(s.n), effectiveAsiste(s.n)||'Sin confirmar', c.rut||'', c.arrived?'Sí':'No', fmtTime(c.arrivedAt), compsLlegados, compsDetalle]);
   });
   const csv = rows.map(r => r.map(v => `"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const filename = 'acreditacion_investidura_'+new Date().toISOString().slice(0,10)+'.csv';
