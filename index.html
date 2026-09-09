@@ -607,6 +607,10 @@
         <label>&nbsp;</label>
         <button class="print-btn" id="printLocutorBtn">🖨️ Imprimir / PDF</button>
       </div>
+      <div class="ctrl">
+        <label>&nbsp;</label>
+        <button class="print-btn" id="notifyOrderBtn">📧 Notificar orden</button>
+      </div>
     </div>
 
     <div class="groups-grid" id="groupsGrid"></div>
@@ -701,6 +705,15 @@ let dbReady = false;
 let lastLocalWriteAt = {}; // n -> Date.now() del último saveCheckin local, para no perder guardados propios frente a un poll con una foto vieja del servidor
 let staffList = []; // [{num, nombre}] — profesores/administrativos registrados para entregar diplomas
 
+// BBDD (2026-09-09): hoja "BBDD" de la misma planilla, pedida por la usuaria
+// como fuente de verdad futura para Asiste/correo/invitados (se llena y
+// corrige vía AppSheet). Se lee en vivo con resource=bbdd (mismo patrón que
+// resource=staff) — objeto { [n]: { correo, asiste, invitadoDiploma,
+// invitados:[...] } }. 16 de los 100 N° de BBDD todavía no existen ahí (la
+// usuaria decidió seguir igual: esos alumnos simplemente no tienen fila en
+// bbddByN y todo cae de vuelta al roster/snapshot estático de siempre).
+let bbddByN = {};
+
 /* ------------------------------------------------------------
    Asignación automática de staff a alumnos sin acompañante —
    regla OPCIONAL (pedido explícito de la usuaria, 2026-09-09,
@@ -777,10 +790,28 @@ function effectiveEspecialidad(n){
 // en vivo desde el detalle (mismo patrón que RUT/Especialidad). '' = sin
 // confirmar todavía (vacío en la planilla original).
 function effectiveAsiste(n){
+  // BBDD (2026-09-09) pasa a ser la fuente de verdad para Asiste cuando tiene
+  // dato para ese N° -- por delante de una corrección manual vieja hecha
+  // desde el detalle (que solo existía como workaround mientras la planilla
+  // de checkins no tenía columna "asiste"). Si BBDD no tiene fila para este
+  // alumno todavía (16 de 100 N° faltan), se cae de vuelta al comportamiento
+  // de siempre.
+  const b = bbddByN[n];
+  if(b && b.asiste) return b.asiste;
   const c = checkins[n];
   if(c && c.asiste) return c.asiste;
   const s = rosterByN[n];
   return (s && s.asiste) || '';
+}
+
+// Correo institucional "efectivo": BBDD (fuente de verdad, editable vía
+// AppSheet) por delante del correo ya embebido del Listado Maestro. Usado
+// sobre todo por la notificación de orden/grupo por correo (más abajo).
+function effectiveCorreo(n){
+  const b = bbddByN[n];
+  if(b && b.correo) return b.correo;
+  const s = rosterByN[n];
+  return (s && s.correo) || '';
 }
 
 async function saveCheckin(n, patch){
@@ -1248,6 +1279,20 @@ async function pollStaff(){
   }catch(e){ /* silencioso */ }
 }
 
+// BBDD en vivo (resource=bbdd, 2026-09-09) — mismo patrón que pollStaff: hoja
+// distinta, falla en silencio para no tumbar la sincronización principal de
+// acreditación si todavía no existe ese branch en el Apps Script.
+async function pollBBDD(){
+  if(!sheetsConfigured()) return;
+  try{
+    const res = await fetch(SHEETS_API_URL + (SHEETS_API_URL.includes('?') ? '&' : '?') + 'resource=bbdd&t=' + Date.now());
+    const json = await res.json();
+    if(!json || json.ok !== true) throw new Error('bad response');
+    bbddByN = json.bbdd || {};
+    renderAll();
+  }catch(e){ /* silencioso */ }
+}
+
 async function initDb(){
   const dot = document.getElementById('connDot');
   const label = document.getElementById('connLabel');
@@ -1262,8 +1307,9 @@ async function initDb(){
 
   await pollCheckins();
   await pollStaff();
+  await pollBBDD();
   clearInterval(pollTimer);
-  pollTimer = setInterval(() => { pollCheckins(); pollStaff(); }, 3000);
+  pollTimer = setInterval(() => { pollCheckins(); pollStaff(); pollBBDD(); }, 3000);
 }
 
 /* ============================================================
@@ -1880,6 +1926,12 @@ function especialidadRank(esp){
 // imprime siempre, tanto en pantalla como en el PDF.
 const DIPLOMA_STAFF_ICON_SVG = '<svg class="diploma-icon-staff" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zm0 2.18L18.09 9 12 12.82 5.91 9 12 5.18zM5 13.18l7 3.82 7-3.82V19c0 1.66-3.13 3-7 3s-7-1.34-7-3v-5.82z"/></svg> ';
 
+// Correo de la usuaria para el "modo prueba" de la notificación de orden por
+// correo (2026-09-09) -- ver openNotifyModal/applyNotifySend más abajo. NUNCA
+// se envía nada, ni de prueba a este correo, sin que ella arme y confirme el
+// envío explícitamente en el modal -- no hay ningún envío automático.
+const TEACHER_TEST_EMAIL = 'ma.cobo@profesor.duoc.cl';
+
 document.getElementById('grpMinus').addEventListener('click', () => { groupSize = Math.max(1, groupSize-1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
 document.getElementById('grpPlus').addEventListener('click', () => { groupSize = Math.min(30, groupSize+1); document.getElementById('grpSizeLabel').textContent = groupSize; renderLocutor(); });
 document.getElementById('orderSelect').addEventListener('change', e => { orderMode = e.target.value; renderLocutor(); });
@@ -2107,6 +2159,152 @@ function renderLocutor(){
     });
   });
 }
+
+/* ============================================================
+   Notificar orden/grupo por correo (2026-09-09) — pedido explícito de la
+   usuaria: solo a alumnos con grupo y orden ya asignado en Locutor (o sea,
+   ya llegaron), correo con la lista completa de SU grupo destacando su
+   propia fila para que sepa después de quién viene. Se gatilla manualmente
+   desde el botón "📧 Notificar orden" -- NUNCA automático.
+
+   SEGURIDAD (pedido explícito): sin su confirmación no se envía NINGÚN
+   correo, ni de prueba, ni al correo de la propia usuaria. Por eso:
+   - El botón "Enviar ahora" requiere DOS clics: el primero solo arma la
+     confirmación (cambia el texto del botón, todavía no llama al servidor);
+     el segundo, ya con el texto de confirmación explícita, es el único que
+     dispara el envío real.
+   - Cambiar el checkbox de "modo prueba" desarma la confirmación de nuevo
+     (para que el texto del botón siempre refleje a quién se le enviaría).
+   - No existe ningún camino de código que llame a applyNotifySend() sin
+     pasar por ese doble clic manual.
+   ============================================================ */
+function buildGroupEmailContent(groupItems, gi, esp, student){
+  const posIdx = groupItems.findIndex(it => it.n === student.n);
+  const rowsHtml = groupItems.map((it, idx) => {
+    const label = esc((idx+1) + '. ' + it.nombre);
+    return it.n === student.n
+      ? `<li style="font-weight:700; color:#1a73e8;">${label} &larr; tú</li>`
+      : `<li>${label}</li>`;
+  }).join('');
+  const rowsText = groupItems.map((it, idx) => (idx+1) + '. ' + it.nombre + (it.n === student.n ? '  <- TÚ' : '')).join('\n');
+  const espTxt = esp ? (' · ' + esp) : '';
+  const subject = 'Orden de llamado — Grupo ' + (gi+1) + espTxt + ' (Investidura de Especialidad)';
+  const htmlBody = '<div style="font-family:Arial,sans-serif; font-size:14px; color:#222; line-height:1.5;">' +
+    '<p>Hola ' + esc(nombrePila(student.nombre)) + ',</p>' +
+    '<p>Este es el orden de llamado de tu grupo para la Investidura de Especialidad. Eres el/la <b>N°' + (posIdx+1) + '</b> de ' + groupItems.length + ' en el <b>Grupo ' + (gi+1) + '</b>' + (esp ? ' (' + esc(esp) + ')' : '') + ':</p>' +
+    '<ol>' + rowsHtml + '</ol>' +
+    '<p>Te recomendamos estar presente con anticipación — el orden puede variar levemente según cómo se vaya desarrollando la ceremonia.</p>' +
+    '<p>Investidura de Especialidad — Duoc UC</p></div>';
+  const textBody = 'Hola ' + nombrePila(student.nombre) + ',\n\n' +
+    'Este es el orden de llamado de tu grupo (Grupo ' + (gi+1) + espTxt + '), eres el/la N°' + (posIdx+1) + ' de ' + groupItems.length + ':\n\n' +
+    rowsText +
+    '\n\nTe recomendamos estar presente con anticipación — el orden puede variar levemente.';
+  return { subject, htmlBody, textBody };
+}
+
+function buildNotifyPlan(){
+  const groups = computeGroups();
+  const withCorreo = [];
+  const withoutCorreo = [];
+  groups.forEach((g, gi) => {
+    g.items.forEach(it => {
+      const correo = effectiveCorreo(it.n);
+      if(correo){
+        const content = buildGroupEmailContent(g.items, gi, g.esp, it);
+        withCorreo.push({ n: it.n, nombre: it.nombre, correo, groupIndex: gi, content });
+      }else{
+        withoutCorreo.push({ n: it.n, nombre: it.nombre, groupIndex: gi });
+      }
+    });
+  });
+  return { withCorreo, withoutCorreo };
+}
+
+function closeNotifyModal(){
+  document.getElementById('modalRoot').innerHTML = '';
+}
+
+function openNotifyModal(){
+  const plan = buildNotifyPlan();
+  const total = plan.withCorreo.length + plan.withoutCorreo.length;
+  const sinCorreoHtml = plan.withoutCorreo.length
+    ? `<div class="faint" style="font-size:12px; margin-top:8px;">Sin correo institucional (no recibirían nada): ${plan.withoutCorreo.map(x=>esc(x.nombre)).join(', ')}</div>`
+    : '';
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="modal-bg" id="notifyBg">
+      <div class="modal" style="max-width:460px;">
+        <h3>Notificar orden por correo</h3>
+        <p>Se le enviaría a cada alumno con grupo y orden asignado en Locutor ahora mismo un correo con la lista completa de su grupo, destacando su propia fila.</p>
+        <p><b>${plan.withCorreo.length}</b> de ${total} alumno(s) con grupo asignado recibirían correo.</p>
+        ${sinCorreoHtml}
+        <label class="check-label" style="margin-top:14px;">
+          <input type="checkbox" id="notifyTestModeCheck">
+          Enviar de prueba: TODO a mi correo (${esc(TEACHER_TEST_EMAIL)}) en vez de a los alumnos
+        </label>
+        <div id="notifyConfirmArea" style="margin-top:14px; ${plan.withCorreo.length ? '' : 'display:none;'}">
+          <button class="confirm-btn off" style="width:100%;" type="button" id="notifyGoBtn">Enviar ahora</button>
+        </div>
+        <div id="notifyResult" style="font-size:12.5px; color:var(--ink-soft); margin-top:10px;"></div>
+        <div class="modal-actions" style="margin-top:14px;">
+          <button class="btn-cancel" id="notifyCancel">Cerrar</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('notifyCancel').addEventListener('click', closeNotifyModal);
+  document.getElementById('notifyBg').addEventListener('click', (e) => { if(e.target.id === 'notifyBg') closeNotifyModal(); });
+
+  const goBtn = document.getElementById('notifyGoBtn');
+  const testCheck = document.getElementById('notifyTestModeCheck');
+  if(goBtn){
+    let armed = false;
+    const disarm = () => { armed = false; goBtn.textContent = 'Enviar ahora'; goBtn.classList.add('off'); };
+    testCheck.addEventListener('change', disarm);
+    goBtn.addEventListener('click', () => {
+      const testMode = testCheck.checked;
+      if(!armed){
+        armed = true;
+        goBtn.textContent = testMode
+          ? `¿Confirmas enviar TODO de prueba a ${TEACHER_TEST_EMAIL}? Sí, enviar`
+          : `¿Confirmas enviar a los ${plan.withCorreo.length} alumnos? Sí, enviar`;
+        goBtn.classList.remove('off');
+        return; // primer clic: solo arma la confirmación, todavía no se envía nada
+      }
+      applyNotifySend(plan, testMode, goBtn);
+    });
+  }
+}
+
+async function applyNotifySend(plan, testMode, btn){
+  const resultEl = document.getElementById('notifyResult');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+  try{
+    const notifications = plan.withCorreo.map(x => ({
+      to: x.correo,
+      subject: x.content.subject,
+      htmlBody: x.content.htmlBody,
+      textBody: x.content.textBody
+    }));
+    const res = await fetch(SHEETS_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ resource: 'notify', testMode: !!testMode, testEmail: TEACHER_TEST_EMAIL, notifications })
+    });
+    const json = await res.json().catch(()=>null);
+    if(!json || !json.ok) throw new Error('send failed');
+    resultEl.textContent = testMode
+      ? `Enviado de prueba: ${json.sent||0} correo(s) a ${TEACHER_TEST_EMAIL}.`
+      : `Enviado: ${json.sent||0} de ${notifications.length} alumno(s).` + ((json.failed && json.failed.length) ? ` Fallaron ${json.failed.length}.` : '');
+    toast('Notificación enviada');
+    btn.textContent = 'Enviado';
+  }catch(e){
+    resultEl.textContent = 'No se pudo enviar. Revisa la conexión e inténtalo otra vez.';
+    btn.disabled = false;
+    btn.textContent = 'Enviar ahora';
+  }
+}
+
+document.getElementById('notifyOrderBtn').addEventListener('click', openNotifyModal);
 
 /* ============================================================
    Export CSV
