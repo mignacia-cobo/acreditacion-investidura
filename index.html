@@ -601,6 +601,7 @@
           <option value="apellido">Alfabético (apellido)</option>
           <option value="especialidad" selected>Por especialidad</option>
           <option value="especialidad-hora">Por especialidad y hora de llegada</option>
+          <option value="especialidad-nombre">Por especialidad y nombre</option>
         </select>
       </div>
       <div class="ctrl">
@@ -2092,13 +2093,17 @@ function computeGroups(){
     const rawGroups = capEnabled ? packIntoGroups(list, groupSize, maxSinAcompanantePorGrupo) : chunkList(list, groupSize);
     return rawGroups.map(items => ({esp:null, items:reorderGroupItems(items)}));
   }
-  // "especialidad" y "especialidad-hora" comparten el mismo agrupamiento por
-  // especialidad (IA primero, ver ESPECIALIDAD_ORDER) — solo cambia el orden
-  // secundario DENTRO de cada especialidad: alfabético por apellido, o por
-  // hora de llegada (quien confirmó llegada primero, primero) — pedido
-  // explícito de la usuaria, 2026-09-09 tarde.
+  // "especialidad", "especialidad-hora" y "especialidad-nombre" comparten el
+  // mismo agrupamiento por especialidad (IA primero, ver ESPECIALIDAD_ORDER)
+  // — solo cambia el orden secundario DENTRO de cada especialidad:
+  // alfabético por apellido, por hora de llegada (quien confirmó llegada
+  // primero, primero), o alfabético por nombre de pila (pedido explícito de
+  // la usuaria, 2026-09-09 tarde: "ordenes los grupos por especialidad...
+  // y después en orden alfabético pero por nombre").
   const ordenSecundario = orderMode === 'especialidad-hora'
     ? (a,b) => (a.arrivedAt||'').localeCompare(b.arrivedAt||'')
+    : orderMode === 'especialidad-nombre'
+    ? (a,b) => nombrePila(a.nombre).localeCompare(nombrePila(b.nombre),'es') || a.apellido.localeCompare(b.apellido,'es')
     : (a,b) => a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es');
   list.sort((a,b) => especialidadRank(a.especialidad) - especialidadRank(b.especialidad) || ordenSecundario(a,b));
 
