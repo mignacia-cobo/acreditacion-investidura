@@ -1932,17 +1932,18 @@ function renderLocutor(){
       const called = calledGroups[gkey+'-'+it.n];
       // Vista Locutor: solo se muestra quien entrega el diploma (un único
       // nombre, sin la lista completa de acompañantes ni la palabra
-      // "Entrega:" — pedido explícito de la usuaria, 2026-09-09). Con la
-      // asignación automática activada (check en el modal de staff), se
-      // agrega un ícono para distinguir de un vistazo si quien entrega es
-      // staff (🎓) o un invitado/acompañante (★) — también pedido explícito.
+      // "Entrega:" — pedido explícito de la usuaria, 2026-09-09). El ícono
+      // (🎓 staff, ★ invitado/acompañante) se muestra SIEMPRE que haya
+      // alguien asignado, prendido o apagado el check de asignación
+      // automática — "sin acompañante" es, para la usuaria, justamente
+      // quien entrega el diploma acá, así que este dato siempre es
+      // relevante y se ve igual venga de una estrella manual, del <select>
+      // de staff, o del botón de asignación automática (pedido explícito,
+      // 2026-09-09, tarde).
       let diplomaLine = '';
       if(it.entregaDiploma){
-        let prefix = '';
-        if(autoStaffAssignEnabled){
-          const esStaff = staffList.some(s => s.nombre === it.entregaDiploma);
-          prefix = esStaff ? '🎓 ' : '★ ';
-        }
+        const esStaff = staffList.some(s => s.nombre === it.entregaDiploma);
+        const prefix = esStaff ? '🎓 ' : '★ ';
         diplomaLine = `<div class="name-item-guests">${prefix}${esc(it.entregaDiploma)}</div>`;
       }
       return `<div class="name-item ${called?'called':''}" data-name-n="${it.n}" data-gkey="${gkey}">
