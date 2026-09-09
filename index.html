@@ -805,8 +805,8 @@ async function saveCheckin(n, patch){
 
 /* ============================================================
    Entrega del diploma — un único asistente por alumno (acompañante
-   marcado con estrella, o profesor/staff asignado automáticamente
-   cuando el alumno no tiene ningún acompañante registrado).
+   marcado con estrella, o profesor/staff asignado automáticamente cuando
+   nadie está marcado -- tenga o no acompañantes registrados).
    ============================================================ */
 function activeCompanions(n){
   return (getCheckin(n).companions || []).filter(cp => cp.nombre && cp.nombre.trim());
@@ -815,15 +815,26 @@ function activeCompanions(n){
 // Reparto justo: al alumno sin acompañante se le asigna el profesor/staff
 // con menos asignaciones vigentes hasta ahora (y, si hay empate, el que
 // entró primero a la lista) — así no le tocan siempre todos los diplomas
-// a la misma persona.
-function pickAutoStaff(){
+// a la misma persona. `excludeNames` (opcional, un Set) permite pedir que no
+// se repita un profesor/staff ya usado en el grupo actual -- pedido
+// explícito de la usuaria, 2026-09-09 tarde: "no se puede repetir el mismo
+// staff/docente en el grupo". Si ya se usaron TODOS los profesores
+// registrados dentro del grupo (excludeNames cubre a todos), la exclusión
+// se ignora y se permite repetir, retomando el reparto justo de siempre
+// (así, si un grupo tiene más "sin acompañante" que profesores, se empieza
+// de nuevo por el primero, en orden, en vez de trabarse).
+function pickAutoStaff(excludeNames){
   if(!staffList.length) return null;
   const counts = {};
   staffList.forEach(s => counts[s.nombre] = 0);
   Object.values(checkins).forEach(c => {
     if(c.entregaDiploma && counts.hasOwnProperty(c.entregaDiploma)) counts[c.entregaDiploma]++;
   });
-  return staffList.slice().sort((a,b) => (counts[a.nombre]-counts[b.nombre]) || (a.num-b.num))[0];
+  let candidatos = staffList;
+  if(excludeNames && excludeNames.size > 0 && excludeNames.size < staffList.length){
+    candidatos = staffList.filter(s => !excludeNames.has(s.nombre));
+  }
+  return candidatos.slice().sort((a,b) => (counts[a.nombre]-counts[b.nombre]) || (a.num-b.num))[0];
 }
 
 // Reglas (actualizadas con la usuaria, 2026-09-09, tarde): (1) si hay un
@@ -846,14 +857,17 @@ function pickAutoStaff(){
 // sin acompañante por grupo. La selección manual (estrella de acompañante,
 // o el <select> de staff en la ficha) sigue funcionando siempre, prendido o
 // apagado el check.
-function ensureDiplomaAssignment(n){
+// `excludeNames` (opcional, un Set de nombres de staff) se pasa directo a
+// pickAutoStaff para no repetir profesor/staff dentro del mismo grupo del
+// Locutor (ver applyAutoStaffAssignment, que arma este Set por grupo).
+function ensureDiplomaAssignment(n, excludeNames){
   const c = getCheckin(n);
   const active = activeCompanions(n);
   const markedCompanion = active.find(cp => cp.nombre === c.entregaDiploma);
   if(markedCompanion) return; // acompañante marcado manualmente: prioridad total, nunca se pisa
   const isValidStaffPick = c.entregaDiploma && staffList.some(s => s.nombre === c.entregaDiploma);
   if(isValidStaffPick) return; // ya tiene un profesor/staff asignado y sigue vigente
-  const pick = pickAutoStaff();
+  const pick = pickAutoStaff(excludeNames);
   if(pick && c.entregaDiploma !== pick.nombre) saveCheckin(n, { entregaDiploma: pick.nombre });
 }
 
@@ -870,27 +884,39 @@ async function applyAutoStaffAssignment(){
   const btn = document.getElementById('autoStaffApplyBtn');
   if(btn){ btn.disabled = true; btn.textContent = 'Asignando…'; }
 
-  // El tope por grupo ya viene aplicado en computeGroups() (ver más abajo,
-  // en la sección de Locutor) — acá se recorre a TODOS los alumnos ya
-  // llegados y se llama a ensureDiplomaAssignment para cada uno: la función
-  // ya sabe no tocar a quien tiene un acompañante marcado con estrella
-  // (prioridad manual), y asignar staff a cualquier otro caso -- tenga o no
-  // acompañantes registrados, mientras ninguno esté marcado como quien
-  // entrega (pedido explícito de la usuaria, 2026-09-09, tarde: la
-  // autoasignación también debe cubrir a quien tiene acompañante pero no
-  // seleccionó la estrellita de entrega, no solo a quien no tiene ningún
-  // acompañante).
+  // El tope por grupo y el reparto (con adelanto de "con acompañante" desde
+  // grupos siguientes) ya vienen aplicados en computeGroups() (ver más
+  // abajo, en la sección de Locutor) — acá se recorre a TODOS los alumnos
+  // ya llegados y se llama a ensureDiplomaAssignment para cada uno: la
+  // función ya sabe no tocar a quien tiene un acompañante marcado con
+  // estrella (prioridad manual), y asignar staff a cualquier otro caso --
+  // tenga o no acompañantes registrados, mientras ninguno esté marcado como
+  // quien entrega.
+  // Pedido explícito de la usuaria, 2026-09-09 tarde: "no se puede repetir
+  // el mismo staff/docente en el grupo". Por eso, GRUPO POR GRUPO, se arma
+  // un Set con los profesores/staff que ya entregan dentro de ESE grupo
+  // (ya sea por una asignación manual, o por una hecha más temprano en este
+  // mismo recorrido) y se lo pasa como exclusión a ensureDiplomaAssignment
+  // -- si ya se usaron todos los profesores del grupo, la exclusión se
+  // ignora y se permite repetir, retomando el reparto justo/rotación de
+  // siempre (ver pickAutoStaff).
   const groups = computeGroups();
   let asignados = 0;
   for(const g of groups){
+    const usadosEnGrupo = new Set();
+    g.items.forEach(it => {
+      const actual = getCheckin(it.n).entregaDiploma;
+      if(actual && staffList.some(s => s.nombre === actual)) usadosEnGrupo.add(actual);
+    });
     for(const it of g.items){
       const before = getCheckin(it.n).entregaDiploma || '';
-      ensureDiplomaAssignment(it.n);
+      ensureDiplomaAssignment(it.n, usadosEnGrupo);
       const after = getCheckin(it.n).entregaDiploma || '';
       if(after && after !== before){
         autoAssignedByFeature.add(it.n);
         asignados++;
       }
+      if(after && staffList.some(s => s.nombre === after)) usadosEnGrupo.add(after);
     }
   }
   saveAutoStaffPrefs();
@@ -1858,12 +1884,24 @@ function arrivedList(){
   // Para el listado del Locutor: los alumnos con especialidad "NO APLICA"
   // (dato corregible desde el detalle del alumno) no deben aparecer aquí,
   // aunque sí sigan contando como acreditados en las estadísticas generales.
+  // "sinAcompanante" (pedido explícito de la usuaria, 2026-09-09 tarde: "la
+  // cantidad máxima de alumnos sin acompañante hace referencia a los sin
+  // acompañante que entrega el diploma") ya NO depende de si el alumno tiene
+  // o no acompañantes registrados, sino de si hay o no un acompañante
+  // ACTIVO marcado con la estrella como quien entrega su diploma. Si nadie
+  // está marcado -- tenga o no acompañantes -- cuenta como "sin
+  // acompañante" para el tope y el reordenamiento, sea que ya tenga un
+  // profesor/staff asignado (automático o manual) o que todavía no tenga a
+  // nadie asignado.
   return Object.values(checkins)
     .filter(c => c.arrived && rosterByN[c.n] && effectiveEspecialidad(c.n) !== 'NO APLICA')
-    .map(c => Object.assign({}, rosterByN[c.n], {
-      arrivedAt:c.arrivedAt, especialidad: effectiveEspecialidad(c.n), entregaDiploma: c.entregaDiploma || '',
-      sinAcompanante: activeCompanions(c.n).length === 0
-    }));
+    .map(c => {
+      const tieneAcompananteQueEntrega = activeCompanions(c.n).some(cp => cp.nombre === c.entregaDiploma);
+      return Object.assign({}, rosterByN[c.n], {
+        arrivedAt:c.arrivedAt, especialidad: effectiveEspecialidad(c.n), entregaDiploma: c.entregaDiploma || '',
+        sinAcompanante: !tieneAcompananteQueEntrega
+      });
+    });
 }
 
 // Cuando la asignación automática de staff está activada (ver check en el
@@ -1882,24 +1920,64 @@ function reorderGroupItems(items){
   return conAcompanante.concat(sinAcompanante);
 }
 
+// Reparte una lista YA ORDENADA (una especialidad completa, o toda la lista
+// si el orden es "apellido") en grupos de tamaño `groupSize`, sin superar
+// `cap` alumnos "sin acompañante que entrega el diploma" por grupo. Pedido
+// explícito de la usuaria, 2026-09-09 tarde: en vez de cerrar el grupo antes
+// de tiempo (dejándolo más chico) en cuanto se alcanza el tope, se van
+// adelantando alumnos CON acompañante que entrega el diploma desde más
+// adelante en la lista para completar el grupo al tamaño configurado, y los
+// "sin acompañante" que quedaron pendientes pasan a considerarse primero en
+// el próximo grupo (y así sucesivamente). Solo si ya no quedan alumnos con
+// acompañante por adelantar, un grupo puede terminar superando el tope
+// (ejemplo de la usuaria: un grupo final de 5 "sin acompañante" con solo 3
+// profesores registrados).
+function packIntoGroups(list, groupSize, cap){
+  const groups = [];
+  let p = 0;
+  const pendingSin = []; // "sin acompañante" pospuestos de un grupo anterior
+  while(p < list.length || pendingSin.length){
+    const group = [];
+    let sinCount = 0;
+    while(pendingSin.length && sinCount < cap && group.length < groupSize){
+      group.push(pendingSin.shift());
+      sinCount++;
+    }
+    while(group.length < groupSize && p < list.length){
+      const item = list[p];
+      if(item.sinAcompanante){
+        if(sinCount < cap){ group.push(item); sinCount++; p++; }
+        else { pendingSin.push(item); p++; }
+      } else {
+        group.push(item); p++;
+      }
+    }
+    // Ya no hay "con acompañante" por adelantar: si quedan pendientes y el
+    // grupo sigue sin llenarse, se agregan aunque superen el tope.
+    while(group.length < groupSize && pendingSin.length){
+      group.push(pendingSin.shift());
+      sinCount++;
+    }
+    if(group.length === 0) break; // seguridad, no debería ocurrir
+    groups.push(group);
+  }
+  return groups;
+}
+
+function chunkList(list, size){
+  const out = [];
+  for(let i=0;i<list.length;i+=size) out.push(list.slice(i, i+size));
+  return out;
+}
+
 function computeGroups(){
   const list = arrivedList();
   const capEnabled = autoStaffAssignEnabled && maxSinAcompanantePorGrupo > 0;
 
   if(orderMode === 'apellido'){
     list.sort((a,b) => a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es'));
-    const groups = [];
-    let current = []; let sinCount = 0;
-    list.forEach(item => {
-      const excederiaTope = capEnabled && item.sinAcompanante && sinCount >= maxSinAcompanantePorGrupo;
-      if((current.length===groupSize || excederiaTope) && current.length>0){
-        groups.push({esp:null, items:reorderGroupItems(current)}); current=[]; sinCount=0;
-      }
-      current.push(item);
-      if(item.sinAcompanante) sinCount++;
-    });
-    if(current.length) groups.push({esp:null, items:reorderGroupItems(current)});
-    return groups;
+    const rawGroups = capEnabled ? packIntoGroups(list, groupSize, maxSinAcompanantePorGrupo) : chunkList(list, groupSize);
+    return rawGroups.map(items => ({esp:null, items:reorderGroupItems(items)}));
   }
   // "especialidad" y "especialidad-hora" comparten el mismo agrupamiento por
   // especialidad (IA primero, ver ESPECIALIDAD_ORDER) — solo cambia el orden
@@ -1910,22 +1988,20 @@ function computeGroups(){
     ? (a,b) => (a.arrivedAt||'').localeCompare(b.arrivedAt||'')
     : (a,b) => a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es');
   list.sort((a,b) => especialidadRank(a.especialidad) - especialidadRank(b.especialidad) || ordenSecundario(a,b));
+
+  // Un grupo nunca mezcla dos especialidades: se reparte cada bloque de
+  // especialidad por separado con packIntoGroups/chunkList.
   const groups = [];
-  let current = []; let curEsp = null; let sinCount = 0;
-  list.forEach(item => {
-    const cambioEspecialidad = item.especialidad !== curEsp && current.length>0;
-    const excederiaTope = capEnabled && item.sinAcompanante && sinCount >= maxSinAcompanantePorGrupo;
-    if((cambioEspecialidad || excederiaTope) && current.length>0){
-      groups.push({esp:curEsp, items:reorderGroupItems(current)}); current=[]; sinCount=0;
+  let segStart = 0;
+  for(let i=1;i<=list.length;i++){
+    if(i===list.length || list[i].especialidad !== list[segStart].especialidad){
+      const segment = list.slice(segStart, i);
+      const esp = segment[0].especialidad;
+      const rawGroups = capEnabled ? packIntoGroups(segment, groupSize, maxSinAcompanantePorGrupo) : chunkList(segment, groupSize);
+      rawGroups.forEach(items => groups.push({esp, items:reorderGroupItems(items)}));
+      segStart = i;
     }
-    curEsp = item.especialidad;
-    current.push(item);
-    if(item.sinAcompanante) sinCount++;
-    if(current.length===groupSize){
-      groups.push({esp:curEsp, items:reorderGroupItems(current)}); current=[]; sinCount=0;
-    }
-  });
-  if(current.length) groups.push({esp:curEsp, items:reorderGroupItems(current)});
+  }
   return groups;
 }
 
