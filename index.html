@@ -286,6 +286,12 @@
     display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; font-size:16px;
   }
   .chk.on{ background:var(--success-wash); border-color:var(--success); color:var(--success); }
+  .star-btn{
+    width:34px; height:34px; border-radius:9px; border:1.5px solid var(--border); background:var(--surface);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; font-size:16px;
+    color:var(--ink-faint);
+  }
+  .star-btn.on{ background:#fff3d6; border-color:#e0a800; color:#e0a800; }
   .rm-btn{
     background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:17px; flex:none; padding:4px;
   }
@@ -293,6 +299,15 @@
     display:flex; align-items:center; gap:6px; background:none; border:1.5px dashed var(--border);
     border-radius:9px; padding:9px; width:100%; cursor:pointer; color:var(--accent); font-weight:600;
     font-size:13.5px; margin-top:4px;
+  }
+  .diploma-box{
+    background:var(--surface-2); border-radius:9px; padding:10px; margin-top:2px;
+  }
+  .diploma-box .diploma-current{ font-size:13.5px; margin-bottom:8px; }
+  .diploma-box .diploma-current b{ color:var(--ink-faint); font-weight:600; }
+  .diploma-box select{
+    width:100%; border:1px solid var(--border); border-radius:7px; padding:7px 8px; font-size:13.5px;
+    background:var(--surface); color:var(--ink); font-family:'Inter';
   }
 
   /* ---------- Scan ---------- */
@@ -585,6 +600,7 @@
     <span>Herramienta interna — no compartir el enlace fuera del equipo de acreditación.</span>
     <span>
       <button id="bulkRutBtn">Cargar RUTs</button>
+      · <button id="registerStaffBtn">Registrar profesor/staff</button>
       · <button id="exportBtn">Exportar registro (CSV)</button>
     </span>
   </div>
@@ -666,6 +682,7 @@ function toast(msg){
 let checkins = {};
 let dbReady = false;
 let lastLocalWriteAt = {}; // n -> Date.now() del último saveCheckin local, para no perder guardados propios frente a un poll con una foto vieja del servidor
+let staffList = []; // [{num, nombre}] — profesores/administrativos registrados para entregar diplomas
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwmmuiFL0F-s2KmSFs3gBRGHUjdZhLgzKbTgN2aokJEvlcBgyZP8fQdudVw6KjmN3UdwQ/exec';
 let pendingScanRut = null; // rut escaneado sin coincidencia todavía
 let pendingScanNameGuess = null; // mejor intento de nombre extraído del texto crudo del código, si lo hay
@@ -728,7 +745,8 @@ async function saveCheckin(n, patch){
       n, nombre: s.nombre || '', especialidad: effectiveEspecialidad(n),
       asiste: effectiveAsiste(n),
       arrived: !!next.arrived, arrivedAt: next.arrivedAt || '',
-      rut: next.rut || '', companions: next.companions || []
+      rut: next.rut || '', companions: next.companions || [],
+      entregaDiploma: next.entregaDiploma || ''
     };
     const res = await fetch(SHEETS_API_URL, {
       method: 'POST',
@@ -740,6 +758,56 @@ async function saveCheckin(n, patch){
   }catch(e){
     toast('No se pudo guardar. Revisa la conexión e inténtalo otra vez.');
   }
+}
+
+/* ============================================================
+   Entrega del diploma — un único asistente por alumno (acompañante
+   marcado con estrella, o profesor/staff asignado automáticamente
+   cuando el alumno no tiene ningún acompañante registrado).
+   ============================================================ */
+function activeCompanions(n){
+  return (getCheckin(n).companions || []).filter(cp => cp.nombre && cp.nombre.trim());
+}
+
+// Reparto justo: al alumno sin acompañante se le asigna el profesor/staff
+// con menos asignaciones vigentes hasta ahora (y, si hay empate, el que
+// entró primero a la lista) — así no le tocan siempre todos los diplomas
+// a la misma persona.
+function pickAutoStaff(){
+  if(!staffList.length) return null;
+  const counts = {};
+  staffList.forEach(s => counts[s.nombre] = 0);
+  Object.values(checkins).forEach(c => {
+    if(c.entregaDiploma && counts.hasOwnProperty(c.entregaDiploma)) counts[c.entregaDiploma]++;
+  });
+  return staffList.slice().sort((a,b) => (counts[a.nombre]-counts[b.nombre]) || (a.num-b.num))[0];
+}
+
+// Se llama cada vez que se muestra o modifica el detalle de un alumno.
+// Reglas (confirmadas con la usuaria): (1) si hay un acompañante marcado con
+// estrella, esa persona entrega el diploma — no se toca. (2) si el alumno
+// tiene acompañantes pero ninguno está marcado, se deja "sin asignar" para
+// que el staff elija a mano. (3) si el alumno NO tiene ningún acompañante,
+// se asigna automáticamente un profesor/staff registrado (y se deja así,
+// sin reasignar en cada render, salvo que ese profesor deje de existir en
+// la lista o el alumno pase a tener acompañante).
+function ensureDiplomaAssignment(n){
+  const c = getCheckin(n);
+  const active = activeCompanions(n);
+  const markedCompanion = active.find(cp => cp.nombre === c.entregaDiploma);
+  if(markedCompanion) return; // acompañante marcado manualmente: prioridad total
+  if(active.length > 0){
+    // Tiene acompañante(s) pero ninguno marcado todavía: no se autoasigna
+    // staff (la regla de autoasignación es solo para "quien no tiene
+    // acompañante"). Si quedó un nombre de un staff que ya no corresponde
+    // (por ejemplo, se acaba de agregar un acompañante), se limpia.
+    if(c.entregaDiploma) saveCheckin(n, { entregaDiploma: '' });
+    return;
+  }
+  const isValidStaffPick = c.entregaDiploma && staffList.some(s => s.nombre === c.entregaDiploma);
+  if(isValidStaffPick) return; // ya tiene un profesor/staff asignado y sigue vigente
+  const pick = pickAutoStaff();
+  if(pick && c.entregaDiploma !== pick.nombre) saveCheckin(n, { entregaDiploma: pick.nombre });
 }
 
 function learnedRutMatch(query){
@@ -852,6 +920,70 @@ async function applyBulkRut(){
 document.getElementById('bulkRutBtn').addEventListener('click', openBulkRutModal);
 
 /* ============================================================
+   Registro de profesores/administrativos (staff) que entregan
+   diplomas — lista compartida vía Sheets (resource=staff), para
+   que el locutor pueda llamar por nombre a quien entrega el
+   certificado cuando el alumno no tiene acompañante presente.
+   ============================================================ */
+function closeStaffModal(){
+  document.getElementById('modalRoot').innerHTML = '';
+}
+
+function openStaffModal(){
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="modal-bg" id="staffBg">
+      <div class="modal" style="max-width:420px;">
+        <h3>Registrar profesor/staff</h3>
+        <p>Nombre de la persona que va a entregar diplomas hoy (ej: "Prof. María Ignacia Cobo"). Se agrega a una lista compartida — cualquier estación la ve.</p>
+        <input type="text" id="staffNameInput" style="width:100%; border:1px solid var(--border); border-radius:9px; padding:10px; background:var(--surface-2); color:var(--ink); font-size:14px;" placeholder="Nombre completo…">
+        <div id="staffResult" style="font-size:12.5px; color:var(--ink-soft); margin-top:10px; max-height:140px; overflow:auto;"></div>
+        <div class="section-label" style="margin-top:14px;">Ya registrados</div>
+        <div id="staffListView" style="font-size:13px; color:var(--ink-soft);">${staffList.length ? staffList.map(s=>esc(s.nombre)).join('<br>') : 'Nadie registrado todavía.'}</div>
+        <div class="modal-actions" style="margin-top:14px;">
+          <button class="btn-cancel" id="staffCancel">Cerrar</button>
+          <button class="confirm-btn off" style="flex:1; margin-top:0;" id="staffSave">Registrar</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('staffCancel').addEventListener('click', closeStaffModal);
+  document.getElementById('staffBg').addEventListener('click', (e) => { if(e.target.id === 'staffBg') closeStaffModal(); });
+  document.getElementById('staffSave').addEventListener('click', applyStaffRegister);
+  document.getElementById('staffNameInput').focus();
+}
+
+async function applyStaffRegister(){
+  const input = document.getElementById('staffNameInput');
+  const resultEl = document.getElementById('staffResult');
+  const nombre = (input.value||'').trim();
+  if(!nombre){ resultEl.textContent = 'Escribe un nombre primero.'; return; }
+  if(!sheetsConfigured()){ resultEl.textContent = 'Sin conexión a la base compartida — no se puede registrar.'; return; }
+
+  const saveBtn = document.getElementById('staffSave');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Guardando…';
+  try{
+    const res = await fetch(SHEETS_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ resource: 'staff', nombre })
+    });
+    const json = await res.json().catch(()=>null);
+    if(!json || !json.ok) throw new Error('write failed');
+    input.value = '';
+    resultEl.textContent = '"' + nombre + '" registrado.';
+    toast('Staff registrado');
+    await pollStaff();
+    document.getElementById('staffListView').innerHTML = staffList.length ? staffList.map(s=>esc(s.nombre)).join('<br>') : 'Nadie registrado todavía.';
+  }catch(e){
+    resultEl.textContent = 'No se pudo registrar. Revisa la conexión e inténtalo otra vez.';
+  }
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Registrar';
+}
+
+document.getElementById('registerStaffBtn').addEventListener('click', openStaffModal);
+
+/* ============================================================
    Inicializar base compartida (capability db)
    ============================================================ */
 function sheetsConfigured(){
@@ -904,6 +1036,21 @@ async function pollCheckins(){
   }
 }
 
+// Lista de profesores/administrativos que entregan diplomas (resource=staff
+// del mismo endpoint). Se pide aparte de pollCheckins porque es una hoja
+// distinta ("staff") — si falla, no debe tumbar la sincronización principal
+// de acreditación, por eso el catch queda en silencio.
+async function pollStaff(){
+  if(!sheetsConfigured()) return;
+  try{
+    const res = await fetch(SHEETS_API_URL + (SHEETS_API_URL.includes('?') ? '&' : '?') + 'resource=staff&t=' + Date.now());
+    const json = await res.json();
+    if(!json || json.ok !== true) throw new Error('bad response');
+    staffList = json.staff || [];
+    renderAll();
+  }catch(e){ /* silencioso */ }
+}
+
 async function initDb(){
   const dot = document.getElementById('connDot');
   const label = document.getElementById('connLabel');
@@ -917,8 +1064,9 @@ async function initDb(){
   }
 
   await pollCheckins();
+  await pollStaff();
   clearInterval(pollTimer);
-  pollTimer = setInterval(pollCheckins, 3000);
+  pollTimer = setInterval(() => { pollCheckins(); pollStaff(); }, 3000);
 }
 
 /* ============================================================
@@ -1054,23 +1202,35 @@ function detailHtml(n){
       <span class="info-sep">·</span>
       <span class="info-item ${effectiveAsiste(n)===''?'empty':''}"><b>Asiste</b><span data-asiste-view>${effectiveAsiste(n) || 'Sin confirmar'}</span></span>
     </div>
-    <div class="faint" style="font-size:11px; margin-top:-4px; margin-bottom:8px;">Se editan desde BBDD/AppSheet, no aquí.</div>
 
     <button class="confirm-btn ${c.arrived?'on':'off'}" data-confirm>
       ${c.arrived ? '✓ Llegada confirmada · '+fmtTime(c.arrivedAt) : 'Confirmar llegada'}
     </button>
 
     <div class="section-label">Acompañantes</div>
+    <div class="faint" style="font-size:11.5px; margin-top:-4px; margin-bottom:6px;">Marca con ★ a quien entrega el diploma (solo uno).</div>
     <div data-companion-list>${companionsHtml || '<div class="faint" style="font-size:12.5px; margin-bottom:6px;">Sin acompañantes registrados.</div>'}</div>
     <button class="add-companion" data-add-companion>+ Agregar acompañante</button>
+
+    <div class="section-label">Entrega el diploma</div>
+    <div class="diploma-box">
+      <div class="diploma-current"><b>Asignado:</b> ${c.entregaDiploma ? esc(c.entregaDiploma) : '<span class="faint">Sin asignar</span>'}</div>
+      <select data-diploma-staff-select>
+        <option value="">— Automático / sin asignar —</option>
+        ${staffList.map(s => `<option value="${esc(s.nombre)}" ${c.entregaDiploma===s.nombre?'selected':''}>${esc(s.nombre)}</option>`).join('')}
+      </select>
+    </div>
   </div>`;
 }
 
 function companionRowHtml(n, comp){
+  const c = getCheckin(n);
+  const isDeliverer = !!comp.nombre && comp.nombre === c.entregaDiploma;
   return `<div class="companion-row" data-companion-id="${comp.id}">
     <input type="text" class="cn" data-comp-nombre value="${esc(comp.nombre||'')}" placeholder="Nombre del acompañante">
     <input type="text" class="cr" data-comp-rut value="${esc(comp.rut||'')}" placeholder="RUT">
     <div class="chk ${comp.arrived?'on':''}" data-comp-check title="Marcar llegada">${comp.arrived?'✓':''}</div>
+    <div class="star-btn ${isDeliverer?'on':''}" data-comp-star title="Entrega el diploma">${isDeliverer?'★':'☆'}</div>
     <button class="rm-btn" data-comp-remove title="Quitar">✕</button>
   </div>`;
 }
@@ -1078,6 +1238,10 @@ function companionRowHtml(n, comp){
 function wireDetail(n){
   const det = document.querySelector(`[data-detail-n="${n}"]`);
   if(!det) return;
+
+  // Autoasigna (o limpia) el profesor/staff que entrega el diploma cada vez
+  // que se abre/actualiza el panel de este alumno — ver ensureDiplomaAssignment.
+  ensureDiplomaAssignment(n);
 
   det.querySelector('[data-close]').addEventListener('click', () => {
     openStudent = null; renderResults();
@@ -1120,9 +1284,32 @@ function wireDetail(n){
     row.querySelector('[data-comp-remove]').addEventListener('click', () => {
       const c = getCheckin(n);
       const companions = (c.companions||[]).filter(cp=>cp.id!==cid);
-      saveCheckin(n, { companions });
+      // Si se quita justo al acompañante que entregaba el diploma, se limpia
+      // la asignación (ensureDiplomaAssignment se encarga de autoasignar staff
+      // en el próximo render, si corresponde).
+      const removed = (c.companions||[]).find(cp=>cp.id===cid);
+      const patch = { companions };
+      if(removed && removed.nombre && removed.nombre === c.entregaDiploma) patch.entregaDiploma = '';
+      saveCheckin(n, patch);
+    });
+    row.querySelector('[data-comp-star]').addEventListener('click', () => {
+      const c = getCheckin(n);
+      const cur = (c.companions||[]).find(cp=>cp.id===cid);
+      if(!cur || !cur.nombre || !cur.nombre.trim()){ toast('Escribe primero el nombre del acompañante'); return; }
+      // Marcar/desmarcar: un único asistente entrega el diploma, así que
+      // marcar a este acompañante reemplaza a cualquier otro (incluido un
+      // profesor/staff que estuviera asignado).
+      const next = (c.entregaDiploma === cur.nombre) ? '' : cur.nombre;
+      saveCheckin(n, { entregaDiploma: next });
     });
   });
+
+  const staffSel = det.querySelector('[data-diploma-staff-select]');
+  if(staffSel){
+    staffSel.addEventListener('change', () => {
+      saveCheckin(n, { entregaDiploma: staffSel.value });
+    });
+  }
 }
 
 /* ============================================================
@@ -1502,7 +1689,7 @@ function arrivedList(){
   // aunque sí sigan contando como acreditados en las estadísticas generales.
   return Object.values(checkins)
     .filter(c => c.arrived && rosterByN[c.n] && effectiveEspecialidad(c.n) !== 'NO APLICA')
-    .map(c => Object.assign({}, rosterByN[c.n], {arrivedAt:c.arrivedAt, especialidad: effectiveEspecialidad(c.n)}));
+    .map(c => Object.assign({}, rosterByN[c.n], {arrivedAt:c.arrivedAt, especialidad: effectiveEspecialidad(c.n), entregaDiploma: c.entregaDiploma || ''}));
 }
 
 function computeGroups(){
@@ -1551,11 +1738,15 @@ function renderLocutor(){
       const guestsLine = guests.length
         ? `<div class="name-item-guests">+ ${esc(guests.map(cp => cp.nombre || '(sin nombre)').join(', '))}</div>`
         : `<div class="name-item-guests">*</div>`;
+      const diplomaLine = it.entregaDiploma
+        ? `<div class="name-item-guests">🎓 Entrega: ${esc(it.entregaDiploma)}</div>`
+        : '';
       return `<div class="name-item ${called?'called':''}" data-name-n="${it.n}" data-gkey="${gkey}">
         <span class="idx mono">${idx+1}</span>
         <div class="name-item-main">
           <span>${esc(nombrePila(it.nombre))} <span class="apn">${esc(bothApellidos(it.nombre))}</span></span>
           ${guestsLine}
+          ${diplomaLine}
         </div>
       </div>`;
     }).join('');
@@ -1593,13 +1784,13 @@ function renderLocutor(){
    Export CSV
    ============================================================ */
 document.getElementById('exportBtn').addEventListener('click', () => {
-  const rows = [['N°','Nombre','Sección','Especialidad','Asiste (confirmó)','RUT','Llegó','Hora llegada','Acompañantes llegados','Detalle acompañantes']];
+  const rows = [['N°','Nombre','Sección','Especialidad','Asiste (confirmó)','RUT','Llegó','Hora llegada','Acompañantes llegados','Detalle acompañantes','Entrega diploma']];
   ROSTER.forEach(s => {
     const c = getCheckin(s.n);
     const comps = (c.companions||[]);
     const compsLlegados = comps.filter(cp=>cp.arrived).length;
     const compsDetalle = comps.map(cp => `${cp.nombre||'(sin nombre)'} ${cp.rut||''} [${cp.arrived?'llegó '+fmtTime(cp.arrivedAt):'pendiente'}]`).join(' | ');
-    rows.push([s.n, s.nombre, s.seccion, effectiveEspecialidad(s.n), effectiveAsiste(s.n)||'Sin confirmar', c.rut||'', c.arrived?'Sí':'No', fmtTime(c.arrivedAt), compsLlegados, compsDetalle]);
+    rows.push([s.n, s.nombre, s.seccion, effectiveEspecialidad(s.n), effectiveAsiste(s.n)||'Sin confirmar', c.rut||'', c.arrived?'Sí':'No', fmtTime(c.arrivedAt), compsLlegados, compsDetalle, c.entregaDiploma||'']);
   });
   const csv = rows.map(r => r.map(v => `"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const filename = 'acreditacion_investidura_'+new Date().toISOString().slice(0,10)+'.csv';
