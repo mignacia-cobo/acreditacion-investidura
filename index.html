@@ -683,6 +683,40 @@ let checkins = {};
 let dbReady = false;
 let lastLocalWriteAt = {}; // n -> Date.now() del último saveCheckin local, para no perder guardados propios frente a un poll con una foto vieja del servidor
 let staffList = []; // [{num, nombre}] — profesores/administrativos registrados para entregar diplomas
+
+/* ------------------------------------------------------------
+   Asignación automática de staff a alumnos sin acompañante —
+   regla OPCIONAL (pedido explícito de la usuaria, 2026-09-09,
+   tarde). Se activa/desactiva con un check en el modal "Registrar
+   profesor/staff"; el ajuste (activo, tope N por grupo, y qué
+   alumnos quedaron asignados por esta función) vive solo en este
+   dispositivo (localStorage), igual que "Tamaño de grupo"/"Orden".
+   ------------------------------------------------------------ */
+let autoStaffAssignEnabled = false; // por defecto DESACTIVADO — sin este check, nunca se autoasigna nada
+let maxSinAcompanantePorGrupo = 2;  // tope configurable de alumnos sin acompañante por grupo del Locutor
+let autoAssignedByFeature = new Set(); // n's asignados por el botón "Asignar automáticamente ahora" — para poder deshacer SOLO esos al destildar el check, sin tocar una elección manual
+const AUTO_STAFF_PREFS_KEY = 'investidura_autoStaffPrefs_v1';
+function loadAutoStaffPrefs(){
+  try{
+    const raw = localStorage.getItem(AUTO_STAFF_PREFS_KEY);
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    autoStaffAssignEnabled = !!data.enabled;
+    if(Number.isFinite(data.max) && data.max >= 1) maxSinAcompanantePorGrupo = data.max;
+    if(Array.isArray(data.assignedNs)) autoAssignedByFeature = new Set(data.assignedNs);
+  }catch(e){ /* localStorage no disponible: se sigue con los valores por defecto */ }
+}
+function saveAutoStaffPrefs(){
+  try{
+    localStorage.setItem(AUTO_STAFF_PREFS_KEY, JSON.stringify({
+      enabled: autoStaffAssignEnabled,
+      max: maxSinAcompanantePorGrupo,
+      assignedNs: Array.from(autoAssignedByFeature)
+    }));
+  }catch(e){ /* ignorar */ }
+}
+loadAutoStaffPrefs();
+
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwmmuiFL0F-s2KmSFs3gBRGHUjdZhLgzKbTgN2aokJEvlcBgyZP8fQdudVw6KjmN3UdwQ/exec';
 let pendingScanRut = null; // rut escaneado sin coincidencia todavía
 let pendingScanNameGuess = null; // mejor intento de nombre extraído del texto crudo del código, si lo hay
@@ -783,14 +817,19 @@ function pickAutoStaff(){
   return staffList.slice().sort((a,b) => (counts[a.nombre]-counts[b.nombre]) || (a.num-b.num))[0];
 }
 
-// Se llama cada vez que se muestra o modifica el detalle de un alumno.
 // Reglas (confirmadas con la usuaria): (1) si hay un acompañante marcado con
 // estrella, esa persona entrega el diploma — no se toca. (2) si el alumno
 // tiene acompañantes pero ninguno está marcado, se deja "sin asignar" para
 // que el staff elija a mano. (3) si el alumno NO tiene ningún acompañante,
-// se asigna automáticamente un profesor/staff registrado (y se deja así,
-// sin reasignar en cada render, salvo que ese profesor deje de existir en
-// la lista o el alumno pase a tener acompañante).
+// se asigna automáticamente un profesor/staff registrado.
+// IMPORTANTE (cambio 2026-09-09, tarde): esta función YA NO se llama sola al
+// abrir la ficha de un alumno — eso fue lo que dejó "TEST-STAFF-PROBE" pegado
+// a una alumna real más temprano hoy. Ahora la autoasignación es una regla
+// OPCIONAL, que solo corre en bloque desde el botón "Asignar automáticamente
+// ahora" del modal de staff (ver más abajo), respetando el tope de alumnos
+// sin acompañante por grupo. La selección manual (estrella de acompañante,
+// o el <select> de staff en la ficha) sigue funcionando siempre, prendido o
+// apagado el check.
 function ensureDiplomaAssignment(n){
   const c = getCheckin(n);
   const active = activeCompanions(n);
@@ -808,6 +847,86 @@ function ensureDiplomaAssignment(n){
   if(isValidStaffPick) return; // ya tiene un profesor/staff asignado y sigue vigente
   const pick = pickAutoStaff();
   if(pick && c.entregaDiploma !== pick.nombre) saveCheckin(n, { entregaDiploma: pick.nombre });
+}
+
+/* ------------------------------------------------------------
+   Botón "Asignar automáticamente ahora" (modal de staff) — bulk,
+   opcional, con tope de alumnos sin acompañante por grupo.
+   ------------------------------------------------------------ */
+async function applyAutoStaffAssignment(){
+  const resultEl = document.getElementById('autoStaffResult');
+  if(!staffList.length){
+    if(resultEl) resultEl.textContent = 'Registra al menos un profesor/staff antes de asignar.';
+    return;
+  }
+  const btn = document.getElementById('autoStaffApplyBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Asignando…'; }
+
+  // El tope por grupo ya viene aplicado en computeGroups() (ver más abajo,
+  // en la sección de Locutor) — acá solo hace falta recorrer a TODOS los
+  // alumnos ya llegados sin acompañante y asignarles, con reparto justo, un
+  // profesor/staff (sin tocar a quien ya tiene una elección manual válida).
+  const groups = computeGroups();
+  let asignados = 0;
+  for(const g of groups){
+    for(const it of g.items){
+      if(!it.sinAcompanante) continue;
+      const before = getCheckin(it.n).entregaDiploma || '';
+      ensureDiplomaAssignment(it.n);
+      const after = getCheckin(it.n).entregaDiploma || '';
+      if(after && after !== before){
+        autoAssignedByFeature.add(it.n);
+        asignados++;
+      }
+    }
+  }
+  saveAutoStaffPrefs();
+  renderLocutor();
+
+  if(btn){ btn.disabled = false; btn.textContent = 'Asignar automáticamente ahora'; }
+  if(resultEl){
+    resultEl.textContent = asignados > 0
+      ? `${asignados} alumno(s) sin acompañante asignados a un profesor/staff.`
+      : 'No había alumnos pendientes por asignar (todos ya tenían acompañante o staff asignado).';
+  }
+  toast(asignados > 0 ? 'Asignación automática aplicada' : 'Nada por asignar');
+}
+
+// Al destildar el check: se quita SOLO lo que asignó esta función (nunca una
+// elección manual hecha a mano vía la estrella del acompañante o el <select>
+// de staff en la ficha del alumno), y el Locutor vuelve al orden alfabético
+// por especialidad de siempre (computeGroups ya no aplica el tope/reordenamiento
+// cuando autoStaffAssignEnabled está apagado).
+async function undoAutoStaffAssignments(){
+  const ns = Array.from(autoAssignedByFeature);
+  autoAssignedByFeature.clear();
+  saveAutoStaffPrefs();
+  let quitados = 0;
+  for(const n of ns){
+    const c = getCheckin(n);
+    if(c.entregaDiploma && staffList.some(s => s.nombre === c.entregaDiploma)){
+      await saveCheckin(n, { entregaDiploma: '' });
+      quitados++;
+    }
+  }
+  renderLocutor();
+  if(quitados) toast(quitados + ' asignación(es) automática(s) removida(s)');
+}
+
+function setAutoStaffEnabled(enabled){
+  autoStaffAssignEnabled = enabled;
+  saveAutoStaffPrefs();
+  if(!enabled){
+    undoAutoStaffAssignments();
+  }else{
+    renderLocutor();
+  }
+}
+
+function setAutoStaffMax(v){
+  maxSinAcompanantePorGrupo = Math.max(1, Math.min(30, v));
+  saveAutoStaffPrefs();
+  renderLocutor();
 }
 
 function learnedRutMatch(query){
@@ -939,6 +1058,24 @@ function openStaffModal(){
         <div id="staffResult" style="font-size:12.5px; color:var(--ink-soft); margin-top:10px; max-height:140px; overflow:auto;"></div>
         <div class="section-label" style="margin-top:14px;">Ya registrados</div>
         <div id="staffListView" style="font-size:13px; color:var(--ink-soft);">${staffList.length ? staffList.map(s=>esc(s.nombre)).join('<br>') : 'Nadie registrado todavía.'}</div>
+
+        <div class="section-label" style="margin-top:14px;">Asignación automática (opcional)</div>
+        <label class="check-label">
+          <input type="checkbox" id="autoStaffCheck" ${autoStaffAssignEnabled ? 'checked' : ''}>
+          Asignar automáticamente un profesor/staff a los alumnos sin acompañante
+        </label>
+        <div id="autoStaffConfig" style="margin-top:10px; ${autoStaffAssignEnabled ? '' : 'display:none;'}">
+          <label style="font-size:12.5px; color:var(--ink-soft);">Máximo de alumnos sin acompañante por grupo (Locutor)</label>
+          <div class="stepper" style="margin-top:6px;">
+            <button type="button" id="autoStaffMaxMinus">−</button>
+            <span class="n mono" id="autoStaffMaxLabel">${maxSinAcompanantePorGrupo}</span>
+            <button type="button" id="autoStaffMaxPlus">+</button>
+          </div>
+          <div class="faint" style="font-size:11.5px; margin-top:6px;">Ajusta este número según cuántos profesores/staff tengan disponibles al mismo tiempo.</div>
+          <button class="confirm-btn off" style="width:100%; margin-top:10px;" type="button" id="autoStaffApplyBtn">Asignar automáticamente ahora</button>
+          <div id="autoStaffResult" style="font-size:12.5px; color:var(--ink-soft); margin-top:8px;"></div>
+        </div>
+
         <div class="modal-actions" style="margin-top:14px;">
           <button class="btn-cancel" id="staffCancel">Cerrar</button>
           <button class="confirm-btn off" style="flex:1; margin-top:0;" id="staffSave">Registrar</button>
@@ -948,6 +1085,19 @@ function openStaffModal(){
   document.getElementById('staffCancel').addEventListener('click', closeStaffModal);
   document.getElementById('staffBg').addEventListener('click', (e) => { if(e.target.id === 'staffBg') closeStaffModal(); });
   document.getElementById('staffSave').addEventListener('click', applyStaffRegister);
+  document.getElementById('autoStaffCheck').addEventListener('change', (e) => {
+    setAutoStaffEnabled(e.target.checked);
+    document.getElementById('autoStaffConfig').style.display = e.target.checked ? '' : 'none';
+  });
+  document.getElementById('autoStaffMaxMinus').addEventListener('click', () => {
+    setAutoStaffMax(maxSinAcompanantePorGrupo - 1);
+    document.getElementById('autoStaffMaxLabel').textContent = maxSinAcompanantePorGrupo;
+  });
+  document.getElementById('autoStaffMaxPlus').addEventListener('click', () => {
+    setAutoStaffMax(maxSinAcompanantePorGrupo + 1);
+    document.getElementById('autoStaffMaxLabel').textContent = maxSinAcompanantePorGrupo;
+  });
+  document.getElementById('autoStaffApplyBtn').addEventListener('click', applyAutoStaffAssignment);
   document.getElementById('staffNameInput').focus();
 }
 
@@ -1239,9 +1389,10 @@ function wireDetail(n){
   const det = document.querySelector(`[data-detail-n="${n}"]`);
   if(!det) return;
 
-  // Autoasigna (o limpia) el profesor/staff que entrega el diploma cada vez
-  // que se abre/actualiza el panel de este alumno — ver ensureDiplomaAssignment.
-  ensureDiplomaAssignment(n);
+  // La autoasignación de staff YA NO corre sola al abrir esta ficha (cambio
+  // 2026-09-09, tarde) — ver ensureDiplomaAssignment y el botón "Asignar
+  // automáticamente ahora" en el modal de staff. Acá solo queda la selección
+  // manual (estrella de acompañante / <select> de staff más abajo).
 
   det.querySelector('[data-close]').addEventListener('click', () => {
     openStudent = null; renderResults();
@@ -1689,28 +1840,73 @@ function arrivedList(){
   // aunque sí sigan contando como acreditados en las estadísticas generales.
   return Object.values(checkins)
     .filter(c => c.arrived && rosterByN[c.n] && effectiveEspecialidad(c.n) !== 'NO APLICA')
-    .map(c => Object.assign({}, rosterByN[c.n], {arrivedAt:c.arrivedAt, especialidad: effectiveEspecialidad(c.n), entregaDiploma: c.entregaDiploma || ''}));
+    .map(c => Object.assign({}, rosterByN[c.n], {
+      arrivedAt:c.arrivedAt, especialidad: effectiveEspecialidad(c.n), entregaDiploma: c.entregaDiploma || '',
+      sinAcompanante: activeCompanions(c.n).length === 0
+    }));
+}
+
+// Cuando la asignación automática de staff está activada (ver check en el
+// modal de staff), un grupo del Locutor no puede tener más de
+// maxSinAcompanantePorGrupo alumnos sin acompañante — si el corte normal
+// (tamaño de grupo / cambio de especialidad) dejaría más, el grupo se cierra
+// antes de tiempo. Dentro de cada grupo ya formado, esos mismos alumnos (los
+// que van a necesitar que un profesor/staff les entregue el diploma) se
+// mueven al final de la lista, sin desordenar al resto — pedido explícito de
+// la usuaria, 2026-09-09 tarde. Con el check apagado, todo esto se ignora y
+// se conserva el orden alfabético/por especialidad de siempre.
+function reorderGroupItems(items){
+  if(!autoStaffAssignEnabled) return items;
+  const conAcompanante = items.filter(it => !it.sinAcompanante);
+  const sinAcompanante = items.filter(it => it.sinAcompanante);
+  return conAcompanante.concat(sinAcompanante);
 }
 
 function computeGroups(){
   const list = arrivedList();
+  const capEnabled = autoStaffAssignEnabled && maxSinAcompanantePorGrupo > 0;
+
   if(orderMode === 'apellido'){
     list.sort((a,b) => a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es'));
     const groups = [];
-    for(let i=0;i<list.length;i+=groupSize) groups.push({esp:null, items:list.slice(i,i+groupSize)});
+    let current = []; let sinCount = 0;
+    list.forEach(item => {
+      const excederiaTope = capEnabled && item.sinAcompanante && sinCount >= maxSinAcompanantePorGrupo;
+      if((current.length===groupSize || excederiaTope) && current.length>0){
+        groups.push({esp:null, items:reorderGroupItems(current)}); current=[]; sinCount=0;
+      }
+      current.push(item);
+      if(item.sinAcompanante) sinCount++;
+    });
+    if(current.length) groups.push({esp:null, items:reorderGroupItems(current)});
     return groups;
   }
   list.sort((a,b) => especialidadRank(a.especialidad) - especialidadRank(b.especialidad) || a.apellido.localeCompare(b.apellido,'es') || a.nombre.localeCompare(b.nombre,'es'));
   const groups = [];
-  let current = []; let curEsp = null;
+  let current = []; let curEsp = null; let sinCount = 0;
   list.forEach(item => {
-    if(item.especialidad !== curEsp && current.length>0){ groups.push({esp:curEsp, items:current}); current=[]; }
+    const cambioEspecialidad = item.especialidad !== curEsp && current.length>0;
+    const excederiaTope = capEnabled && item.sinAcompanante && sinCount >= maxSinAcompanantePorGrupo;
+    if((cambioEspecialidad || excederiaTope) && current.length>0){
+      groups.push({esp:curEsp, items:reorderGroupItems(current)}); current=[]; sinCount=0;
+    }
     curEsp = item.especialidad;
     current.push(item);
-    if(current.length===groupSize){ groups.push({esp:curEsp, items:current}); current=[]; }
+    if(item.sinAcompanante) sinCount++;
+    if(current.length===groupSize){
+      groups.push({esp:curEsp, items:reorderGroupItems(current)}); current=[]; sinCount=0;
+    }
   });
-  if(current.length) groups.push({esp:curEsp, items:current});
+  if(current.length) groups.push({esp:curEsp, items:reorderGroupItems(current)});
   return groups;
+}
+
+// Incluye el estado de la asignación automática (activada + tope) en la
+// clave del grupo: si se prende/apaga el check, la composición de los
+// grupos cambia (por el tope de sin-acompañante), así que "llamado"
+// guardado bajo un modo no debe reaparecer mezclado con el otro modo.
+function locutorGkey(gi){
+  return orderMode+'-'+gi+'-'+groupSize + (autoStaffAssignEnabled ? ('-cap'+maxSinAcompanantePorGrupo) : '');
 }
 
 function renderLocutor(){
@@ -1729,17 +1925,26 @@ function renderLocutor(){
   empty.style.display='none';
 
   grid.innerHTML = groups.map((g,gi) => {
-    const gkey = orderMode+'-'+gi+'-'+groupSize;
+    const gkey = locutorGkey(gi);
     const done = !!calledGroups[gkey];
     const espLabel = g.esp ? `<div class="group-esp">${esc(g.esp)}</div>` : '';
     const names = g.items.map((it,idx) => {
       const called = calledGroups[gkey+'-'+it.n];
       // Vista Locutor: solo se muestra quien entrega el diploma (un único
       // nombre, sin la lista completa de acompañantes ni la palabra
-      // "Entrega:" — pedido explícito de la usuaria, 2026-09-09).
-      const diplomaLine = it.entregaDiploma
-        ? `<div class="name-item-guests">${esc(it.entregaDiploma)}</div>`
-        : '';
+      // "Entrega:" — pedido explícito de la usuaria, 2026-09-09). Con la
+      // asignación automática activada (check en el modal de staff), se
+      // agrega un ícono para distinguir de un vistazo si quien entrega es
+      // staff (🎓) o un invitado/acompañante (★) — también pedido explícito.
+      let diplomaLine = '';
+      if(it.entregaDiploma){
+        let prefix = '';
+        if(autoStaffAssignEnabled){
+          const esStaff = staffList.some(s => s.nombre === it.entregaDiploma);
+          prefix = esStaff ? '🎓 ' : '★ ';
+        }
+        diplomaLine = `<div class="name-item-guests">${prefix}${esc(it.entregaDiploma)}</div>`;
+      }
       return `<div class="name-item ${called?'called':''}" data-name-n="${it.n}" data-gkey="${gkey}">
         <span class="idx mono">${idx+1}</span>
         <div class="name-item-main">
@@ -1771,7 +1976,7 @@ function renderLocutor(){
       const gkey = el.dataset.markGroup;
       const nowDone = !calledGroups[gkey];
       calledGroups[gkey] = nowDone;
-      const g = groups.find((gg,i)=> (orderMode+'-'+i+'-'+groupSize)===gkey);
+      const g = groups.find((gg,i)=> locutorGkey(i)===gkey);
       if(g) g.items.forEach(it => calledGroups[gkey+'-'+it.n] = nowDone);
       renderLocutor();
     });
