@@ -258,10 +258,10 @@
   }
 
   .info-line{
-    display:flex; flex-wrap:wrap; align-items:baseline; gap:5px 12px;
-    font-size:12.5px; color:var(--ink-soft); margin-top:10px; margin-bottom:4px;
-    padding:8px 10px; background:var(--surface-2); border-radius:9px;
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:5px 6px;
+    font-size:13px; color:var(--ink-soft); margin-top:4px; margin-bottom:8px;
   }
+  .info-line .info-sep{ color:var(--ink-faint); }
   .info-line .info-item{ display:inline-flex; gap:4px; }
   .info-line .info-item b{ font-weight:600; color:var(--ink-faint); }
   .info-line .info-item .mono{ font-family:'IBM Plex Mono'; }
@@ -1049,10 +1049,12 @@ function detailHtml(n){
 
     <div class="info-line">
       <span class="info-item ${c.rut?'':'empty'}"><b>RUT</b><span class="mono" data-rut-view>${c.rut ? esc(c.rut) : 'Sin registrar todavía'}</span></span>
+      <span class="info-sep">·</span>
       <span class="info-item"><b>Especialidad</b><span data-especialidad-view>${esc(effectiveEspecialidad(n))}</span></span>
+      <span class="info-sep">·</span>
       <span class="info-item ${effectiveAsiste(n)===''?'empty':''}"><b>Asiste</b><span data-asiste-view>${effectiveAsiste(n) || 'Sin confirmar'}</span></span>
     </div>
-    <div class="faint" style="font-size:11px; margin-top:-2px; margin-bottom:8px;">Se editan desde BBDD/AppSheet, no aquí.</div>
+    <div class="faint" style="font-size:11px; margin-top:-4px; margin-bottom:8px;">Se editan desde BBDD/AppSheet, no aquí.</div>
 
     <button class="confirm-btn ${c.arrived?'on':'off'}" data-confirm>
       ${c.arrived ? '✓ Llegada confirmada · '+fmtTime(c.arrivedAt) : 'Confirmar llegada'}
