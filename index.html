@@ -257,6 +257,16 @@
     font-size:11px; font-weight:600; color:var(--ink-faint); white-space:nowrap;
   }
 
+  .info-line{
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:5px 12px;
+    font-size:12.5px; color:var(--ink-soft); margin-top:10px; margin-bottom:4px;
+    padding:8px 10px; background:var(--surface-2); border-radius:9px;
+  }
+  .info-line .info-item{ display:inline-flex; gap:4px; }
+  .info-line .info-item b{ font-weight:600; color:var(--ink-faint); }
+  .info-line .info-item .mono{ font-family:'IBM Plex Mono'; }
+  .info-line .info-item.empty{ color:var(--ink-faint); font-style:italic; }
+
   .section-label{
     font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
     color:var(--ink-faint); margin:16px 0 8px;
@@ -1037,25 +1047,16 @@ function detailHtml(n){
       <button class="close-x" data-close>✕</button>
     </div>
 
+    <div class="info-line">
+      <span class="info-item ${c.rut?'':'empty'}"><b>RUT</b><span class="mono" data-rut-view>${c.rut ? esc(c.rut) : 'Sin registrar todavía'}</span></span>
+      <span class="info-item"><b>Especialidad</b><span data-especialidad-view>${esc(effectiveEspecialidad(n))}</span></span>
+      <span class="info-item ${effectiveAsiste(n)===''?'empty':''}"><b>Asiste</b><span data-asiste-view>${effectiveAsiste(n) || 'Sin confirmar'}</span></span>
+    </div>
+    <div class="faint" style="font-size:11px; margin-top:-2px; margin-bottom:8px;">Se editan desde BBDD/AppSheet, no aquí.</div>
+
     <button class="confirm-btn ${c.arrived?'on':'off'}" data-confirm>
       ${c.arrived ? '✓ Llegada confirmada · '+fmtTime(c.arrivedAt) : 'Confirmar llegada'}
     </button>
-
-    <div class="field-row">
-      <label>RUT</label>
-      <div class="field-value mono ${c.rut?'':'empty'}" data-rut-view>${c.rut ? esc(c.rut) : 'Sin registrar todavía'}</div>
-    </div>
-
-    <div class="field-row">
-      <label>Especialidad</label>
-      <div class="field-value" data-especialidad-view>${esc(effectiveEspecialidad(n))}</div>
-    </div>
-
-    <div class="field-row">
-      <label>Asiste</label>
-      <div class="field-value ${effectiveAsiste(n)===''?'empty':''}" data-asiste-view>${effectiveAsiste(n) || 'Sin confirmar'}</div>
-    </div>
-    <div class="faint" style="font-size:11.5px; margin-top:-4px; margin-bottom:2px;">RUT, especialidad y asistencia ahora se editan desde BBDD/AppSheet, no aquí.</div>
 
     <div class="section-label">Acompañantes</div>
     <div data-companion-list>${companionsHtml || '<div class="faint" style="font-size:12.5px; margin-bottom:6px;">Sin acompañantes registrados.</div>'}</div>
